@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useApp } from "@/lib/storage";
 import { getCurrentMonth, getCurrentWeek } from "@/lib/calculations";
-import { Sparkles, Send, Mic, Square, Loader2, Check, X } from "lucide-react";
+import { Sparkles, Send, Loader2, Check, X, Keyboard } from "lucide-react";
 import { toast } from "sonner";
 
 interface ParsedExercise {
@@ -19,13 +19,9 @@ interface ParsedExercise {
 export function AILogInput() {
   const { activeUser, addEntry, data } = useApp();
   const [text, setText] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [preview, setPreview] = useState<ParsedExercise[] | null>(null);
-  const recognitionRef = useRef<any>(null);
-  const latestTranscriptRef = useRef("");
-  const isRecordingRef = useRef(false);
-  const segmentsRef = useRef<string[]>([]);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const doParse = useCallback(async (inputText: string) => {
     if (!inputText.trim()) return;
@@ -58,82 +54,6 @@ export function AILogInput() {
   }, []);
 
   if (!activeUser) return null;
-
-  const createRecognition = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return null;
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.lang = "en-US";
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (event: any) => {
-      // Only grab new final results we haven't processed yet
-      const segs = segmentsRef.current;
-      for (let i = segs.length; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          segs.push(event.results[i][0].transcript.trim());
-        }
-      }
-      const full = segs.join(" ");
-      latestTranscriptRef.current = full;
-      setText(full);
-    };
-
-    recognition.onerror = (event: any) => {
-      // Only stop on fatal errors, not on "no-speech"
-      if (event.error === "not-allowed" || event.error === "audio-capture") {
-        isRecordingRef.current = false;
-        setIsRecording(false);
-        toast.error("Microphone access denied");
-      }
-    };
-
-    recognition.onend = () => {
-      // Mobile browsers auto-stop recognition after a pause.
-      // If we're still supposed to be recording, spin up a new one.
-      if (isRecordingRef.current) {
-        const next = createRecognition();
-        if (next) {
-          recognitionRef.current = next;
-          try { next.start(); } catch {}
-        }
-      }
-    };
-
-    return recognition;
-  };
-
-  const startRecording = () => {
-    const recognition = createRecognition();
-    if (!recognition) {
-      toast.error("Speech recognition not available — use Chrome");
-      return;
-    }
-
-    segmentsRef.current = [];
-    latestTranscriptRef.current = "";
-    recognitionRef.current = recognition;
-    isRecordingRef.current = true;
-    setIsRecording(true);
-    setText("");
-
-    try {
-      recognition.start();
-      toast.success("Recording... take your time, hit send when done", { duration: 2500 });
-    } catch {
-      isRecordingRef.current = false;
-      setIsRecording(false);
-    }
-  };
-
-  const stopRecording = () => {
-    isRecordingRef.current = false;
-    setIsRecording(false);
-    try { recognitionRef.current?.stop(); } catch {}
-  };
 
   const handleConfirmAll = () => {
     if (!preview || !activeUser) return;
@@ -170,17 +90,20 @@ export function AILogInput() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 px-1">
-        <Sparkles className="h-3.5 w-3.5 text-primary/60" />
-        <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">
-          AI Log — describe your workout
-        </span>
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-primary/60" />
+          <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">
+            AI Log — type or use voice keyboard
+          </span>
+        </div>
       </div>
 
       <div className="flex gap-2">
         <div className="relative flex-1">
           <textarea
-            placeholder={'e.g. "squats 225 for 6 reps 2 sets, bench 185 for 5, and pull-ups"'}
+            ref={inputRef}
+            placeholder={'Tap mic on your keyboard 🎤 or type:\n"squats 225 for 6, bench 185 for 5"'}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
@@ -190,28 +113,11 @@ export function AILogInput() {
               }
             }}
             rows={2}
-            className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 pr-12 text-sm text-white placeholder:text-white/15 outline-none focus:border-primary/40 transition-colors resize-none"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/15 outline-none focus:border-primary/40 transition-colors resize-none"
           />
-          {/* Voice button */}
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            className={`absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-90 ${
-              isRecording
-                ? "bg-red-500/20 text-red-400 animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.3)]"
-                : "bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/50"
-            }`}
-          >
-            {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
-          </button>
         </div>
         <button
-          onClick={() => {
-            if (isRecording) {
-              recognitionRef.current?.stop();
-              setIsRecording(false);
-            }
-            doParse(text);
-          }}
+          onClick={() => doParse(text)}
           disabled={!text.trim() || isLoading}
           className="flex h-[62px] w-[46px] shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-all hover:bg-primary/20 disabled:opacity-20 disabled:cursor-not-allowed active:scale-95"
         >
@@ -221,6 +127,14 @@ export function AILogInput() {
             <Send className="h-4 w-4" />
           )}
         </button>
+      </div>
+
+      {/* Tip */}
+      <div className="flex items-center gap-2 rounded-lg bg-white/[0.02] border border-white/5 px-3 py-2">
+        <Keyboard className="h-3.5 w-3.5 text-white/20 shrink-0" />
+        <p className="text-[10px] text-white/20">
+          Use the 🎤 on your phone keyboard for voice — it works perfectly with pauses
+        </p>
       </div>
 
       {/* Loading state */}
