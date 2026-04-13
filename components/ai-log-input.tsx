@@ -68,19 +68,22 @@ export function AILogInput() {
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
     latestTranscriptRef.current = "";
-    shouldAutoParseRef.current = true; // always auto-parse when voice ends
-    recognition.continuous = false; // single utterance — stops after you pause
-    recognition.interimResults = false; // only final results — no duplicates
+    shouldAutoParseRef.current = true;
+    recognition.continuous = false;
+    recognition.interimResults = false;
     recognition.lang = "en-US";
+    recognition.maxAlternatives = 1;
 
+    let gotResult = false;
     recognition.onresult = (event: any) => {
-      // Only take the final result
-      const last = event.results[event.results.length - 1];
-      if (last.isFinal) {
-        const transcript = last[0].transcript;
-        latestTranscriptRef.current = transcript;
-        setText(transcript);
-      }
+      if (gotResult) return; // only accept the first final result
+      gotResult = true;
+      // Grab only the very first result's transcript
+      const transcript = event.results[0][0].transcript;
+      latestTranscriptRef.current = transcript;
+      setText(transcript);
+      // Stop immediately after getting result
+      try { recognition.stop(); } catch {}
     };
 
     recognition.onerror = (event: any) => {
