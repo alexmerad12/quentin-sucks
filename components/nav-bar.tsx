@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Dumbbell, CalendarDays, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useApp } from "@/lib/storage";
 
 const tabs = [
   { href: "/", label: "Home", icon: Home },
@@ -14,6 +15,10 @@ const tabs = [
 
 export function NavBar() {
   const pathname = usePathname();
+  const { activeUser } = useApp();
+
+  // Hide nav when no user selected (user selection screen)
+  if (!activeUser) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/5 bg-black/90 backdrop-blur-xl">
@@ -28,10 +33,13 @@ export function NavBar() {
                 "relative flex flex-1 flex-col items-center gap-1 py-3 text-[11px] font-medium tracking-wide uppercase transition-all duration-200",
                 active
                   ? "text-primary"
-                  : "text-white/30 hover:text-white/60"
+                  : "text-white/50 hover:text-white/70"
               )}
             >
-              <tab.icon className={cn("h-5 w-5", active && "drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]")} />
+              <tab.icon className={cn(
+                "h-5 w-5",
+                active && "drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]"
+              )} strokeWidth={active ? 2.5 : 1.5} />
               {tab.label}
               {active && (
                 <span className="absolute -top-px left-1/2 h-[2px] w-8 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_8px_rgba(74,222,128,0.5)]" />
