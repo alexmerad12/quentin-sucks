@@ -68,22 +68,27 @@ export function AILogInput() {
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
     latestTranscriptRef.current = "";
-    shouldAutoParseRef.current = true;
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    shouldAutoParseRef.current = false;
+    recognition.continuous = true; // keep listening until user hits send/stop
+    recognition.interimResults = true; // show live text as they speak
     recognition.lang = "en-US";
     recognition.maxAlternatives = 1;
 
-    let gotResult = false;
     recognition.onresult = (event: any) => {
-      if (gotResult) return; // only accept the first final result
-      gotResult = true;
-      // Grab only the very first result's transcript
-      const transcript = event.results[0][0].transcript;
-      latestTranscriptRef.current = transcript;
-      setText(transcript);
-      // Stop immediately after getting result
-      try { recognition.stop(); } catch {}
+      // Build transcript only from final + latest interim
+      let finalText = "";
+      let interimText = "";
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalText += result[0].transcript;
+        } else {
+          interimText += result[0].transcript;
+        }
+      }
+      const full = (finalText + " " + interimText).trim();
+      latestTranscriptRef.current = full;
+      setText(full);
     };
 
     recognition.onerror = (event: any) => {
@@ -95,15 +100,11 @@ export function AILogInput() {
 
     recognition.onend = () => {
       setIsRecording(false);
-      // Auto-parse when voice stops (if user tapped stop)
-      if (shouldAutoParseRef.current && latestTranscriptRef.current.trim()) {
-        doParse(latestTranscriptRef.current);
-      }
     };
 
     recognition.start();
     setIsRecording(true);
-    toast.success("Listening... speak naturally", { duration: 2000 });
+    toast.success("Listening... hit send when done", { duration: 2000 });
   };
 
   const stopRecording = () => {
