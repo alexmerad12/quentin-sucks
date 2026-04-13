@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useApp } from "@/lib/storage";
 import { getCurrentMonth, getCurrentWeek } from "@/lib/calculations";
-import { Sparkles, Send, Mic, MicOff, Loader2, Check, X } from "lucide-react";
+import { Sparkles, Send, Mic, Square, Loader2, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface ParsedExercise {
@@ -23,52 +23,11 @@ export function AILogInput() {
   const [isLoading, setIsLoading] = useState(false);
   const [preview, setPreview] = useState<ParsedExercise[] | null>(null);
   const recognitionRef = useRef<any>(null);
+  const latestTranscriptRef = useRef("");
+  const shouldAutoParseRef = useRef(false);
 
-  if (!activeUser) return null;
-
-  const startRecording = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      toast.error("Speech recognition not available — use Chrome");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognitionRef.current = recognition;
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-
-    recognition.onresult = (event: any) => {
-      let transcript = "";
-      for (let i = 0; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      setText(transcript);
-    };
-
-    recognition.onerror = (event: any) => {
-      setIsRecording(false);
-      if (event.error === "not-allowed") {
-        toast.error("Microphone access denied");
-      }
-    };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-    };
-
-    recognition.start();
-    setIsRecording(true);
-  };
-
-  const stopRecording = () => {
-    recognitionRef.current?.stop();
-    setIsRecording(false);
-  };
-
-  const handleParse = async () => {
-    if (!text.trim()) return;
+  const doParse = useCallback(async (inputText: string) => {
+    if (!inputText.trim()) return;
     setIsLoading(true);
     setPreview(null);
 
@@ -76,7 +35,7 @@ export function AILogInput() {
       const res = await fetch("/api/parse-workout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text: inputText }),
       });
 
       if (!res.ok) {
@@ -95,6 +54,58 @@ export function AILogInput() {
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  if (!activeUser) return null;
+
+  const startRecording = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error("Speech recognition not available — use Chrome");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    latestTranscriptRef.current = "";
+    shouldAutoParseRef.current = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event: any) => {
+      let transcript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      latestTranscriptRef.current = transcript;
+      setText(transcript);
+    };
+
+    recognition.onerror = (event: any) => {
+      setIsRecording(false);
+      if (event.error === "not-allowed") {
+        toast.error("Microphone access denied");
+      }
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+      // Auto-parse when voice stops (if user tapped stop)
+      if (shouldAutoParseRef.current && latestTranscriptRef.current.trim()) {
+        doParse(latestTranscriptRef.current);
+      }
+    };
+
+    recognition.start();
+    setIsRecording(true);
+    toast.success("Listening... tap stop when done", { duration: 2000 });
+  };
+
+  const stopRecording = () => {
+    shouldAutoParseRef.current = true; // flag to auto-parse on end
+    recognitionRef.current?.stop();
+    setIsRecording(false);
   };
 
   const handleConfirmAll = () => {
@@ -127,11 +138,7 @@ export function AILogInput() {
   const handleRemoveExercise = (index: number) => {
     if (!preview) return;
     const next = preview.filter((_, i) => i !== index);
-    if (next.length === 0) {
-      setPreview(null);
-    } else {
-      setPreview(next);
-    }
+    setPreview(next.length === 0 ? null : next);
   };
 
   return (
@@ -146,13 +153,13 @@ export function AILogInput() {
       <div className="flex gap-2">
         <div className="relative flex-1">
           <textarea
-            placeholder="e.g. &quot;I did squats 225 for 6 reps 2 sets, then bench 185 for 5, and some pull-ups&quot;"
+            placeholder={'e.g. "squats 225 for 6 reps 2 sets, bench 185 for 5, and pull-ups"'}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                handleParse();
+                doParse(text);
               }
             }}
             rows={2}
@@ -161,17 +168,17 @@ export function AILogInput() {
           {/* Voice button */}
           <button
             onClick={isRecording ? stopRecording : startRecording}
-            className={`absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg transition-all active:scale-90 ${
+            className={`absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-90 ${
               isRecording
-                ? "bg-red-500/20 text-red-400 animate-pulse"
+                ? "bg-red-500/20 text-red-400 animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.3)]"
                 : "bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/50"
             }`}
           >
-            {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
           </button>
         </div>
         <button
-          onClick={handleParse}
+          onClick={() => doParse(text)}
           disabled={!text.trim() || isLoading}
           className="flex h-[62px] w-[46px] shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-all hover:bg-primary/20 disabled:opacity-20 disabled:cursor-not-allowed active:scale-95"
         >
@@ -182,6 +189,14 @@ export function AILogInput() {
           )}
         </button>
       </div>
+
+      {/* Loading state */}
+      {isLoading && (
+        <div className="flex items-center gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 text-xs text-white/40">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+          Analyzing your workout...
+        </div>
+      )}
 
       {/* Preview parsed exercises */}
       {preview && preview.length > 0 && (

@@ -14,7 +14,7 @@ export default function LogPage() {
   const { activeUser, getEntries } = useApp();
   const [month, setMonth] = useState(getCurrentMonth);
   const [week, setWeek] = useState<number>(getCurrentWeek);
-  const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
+  const [selectedExercise, setSelectedExercise] = useState<string>("");
 
   if (!activeUser) return <UserSelector />;
 

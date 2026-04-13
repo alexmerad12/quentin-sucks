@@ -6,11 +6,11 @@ import { StatsCard } from "@/components/stats-card";
 import { ActivityFeed } from "@/components/activity-feed";
 import { UserSwitcher } from "@/components/user-selector";
 import Link from "next/link";
-import { Dumbbell, Database } from "lucide-react";
+import { Dumbbell, Database, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function HomePage() {
-  const { data, activeUser, loadSeedData } = useApp();
+  const { data, activeUser, loadSeedData, clearAllData } = useApp();
 
   if (!activeUser) return <UserSelector />;
 
@@ -51,19 +51,35 @@ export default function HomePage() {
 
       <ActivityFeed />
 
-      {/* Seed data button - only when empty */}
-      {data.entries.length === 0 && (
-        <button
-          onClick={() => {
-            loadSeedData();
-            toast.success("Demo data loaded!");
-          }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 px-4 py-3 text-xs text-white/30 transition-colors hover:border-white/20 hover:text-white/50"
-        >
-          <Database className="h-3.5 w-3.5" />
-          Load demo data
-        </button>
-      )}
+      {/* Data management */}
+      <div className="flex gap-2">
+        {data.entries.length === 0 && (
+          <button
+            onClick={() => {
+              loadSeedData();
+              toast.success("Demo data loaded!");
+            }}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 px-4 py-3 text-xs text-white/30 transition-colors hover:border-white/20 hover:text-white/50"
+          >
+            <Database className="h-3.5 w-3.5" />
+            Load demo data
+          </button>
+        )}
+        {data.entries.length > 0 && (
+          <button
+            onClick={() => {
+              if (confirm("Delete ALL workout data? This can't be undone.")) {
+                clearAllData();
+                toast.success("All data cleared");
+              }
+            }}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-red-500/20 px-4 py-3 text-xs text-red-400/40 transition-colors hover:border-red-500/40 hover:text-red-400/70"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Clear all data
+          </button>
+        )}
+      </div>
     </div>
   );
 }

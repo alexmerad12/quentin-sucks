@@ -3,10 +3,11 @@
 import { useApp } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { AddExerciseDialog } from "./add-exercise-dialog";
-import { Check } from "lucide-react";
+import { Check, ChevronRight, X } from "lucide-react";
+import { toast } from "sonner";
 
 interface ExerciseGridProps {
-  selected: string | null;
+  selected: string;
   onSelect: (id: string) => void;
   completedExercises?: Set<string>;
 }
@@ -22,7 +23,7 @@ const EXERCISE_ICONS: Record<string, string> = {
 };
 
 export function ExerciseGrid({ selected, onSelect, completedExercises }: ExerciseGridProps) {
-  const { getAllExercises } = useApp();
+  const { getAllExercises, removeCustomExercise } = useApp();
   const exercises = getAllExercises();
 
   return (
@@ -39,11 +40,11 @@ export function ExerciseGrid({ selected, onSelect, completedExercises }: Exercis
           return (
             <button
               key={ex.id}
-              onClick={() => onSelect(ex.id)}
+              onClick={() => onSelect(isSelected ? "" : ex.id)}
               className={cn(
-                "relative flex items-center gap-3 rounded-xl border px-4 py-4 text-left transition-all duration-200 active:scale-[0.97]",
+                "relative flex items-center gap-3 rounded-xl border px-4 py-4 text-left transition-all duration-150 active:scale-[0.97]",
                 isSelected
-                  ? "border-primary/40 bg-primary/10 shadow-[0_0_20px_rgba(74,222,128,0.1)]"
+                  ? "border-primary bg-primary/15 ring-1 ring-primary/30 shadow-[0_0_24px_rgba(74,222,128,0.15)]"
                   : done
                   ? "border-primary/20 bg-primary/[0.03]"
                   : "border-white/5 bg-white/[0.02] hover:border-white/10 hover:bg-white/[0.04]"
@@ -61,8 +62,24 @@ export function ExerciseGrid({ selected, onSelect, completedExercises }: Exercis
                   <div className="text-[10px] text-white/20">custom</div>
                 )}
               </div>
-              {done && !isSelected && (
+              {isSelected ? (
+                <ChevronRight className="h-4 w-4 text-primary shrink-0" />
+              ) : done ? (
                 <Check className="h-4 w-4 text-primary/60 shrink-0" />
+              ) : null}
+              {/* Delete button for custom exercises */}
+              {ex.isCustom && (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeCustomExercise(ex.id);
+                    if (isSelected) onSelect("");
+                    toast.success(`Removed ${ex.name}`);
+                  }}
+                  className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/40 transition-colors z-10"
+                >
+                  <X className="h-3 w-3" />
+                </span>
               )}
             </button>
           );

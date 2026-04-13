@@ -57,6 +57,7 @@ interface AppContextValue {
   exportData: () => string;
   importData: (json: string) => boolean;
   loadSeedData: () => void;
+  clearAllData: () => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -238,6 +239,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setData(seed);
   }, []);
 
+  const clearAllData = useCallback(() => {
+    const fresh = getDefaultData();
+    saveData(fresh);
+    setData(fresh);
+  }, []);
+
   const activeUser = data.activeUser ? data.users[data.activeUser] : null;
 
   if (!loaded) {
@@ -263,6 +270,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         getAllExercises,
         importData,
         loadSeedData,
+        clearAllData,
       }}
     >
       {children}
