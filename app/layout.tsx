@@ -31,7 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} dark h-full antialiased`}>
-      <body className="min-h-full bg-background text-foreground font-sans">
+      <body className="min-h-full font-sans" style={{ backgroundColor: "#0d0d0d", color: "#f2f2f2" }}>
         <AppProvider>
           <main className="mx-auto max-w-lg pb-24 pt-2">{children}</main>
           <NavBar />

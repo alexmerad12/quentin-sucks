@@ -123,8 +123,9 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
+  html, body {
+    background-color: #0d0d0d !important;
+    color: #f2f2f2 !important;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
   }
