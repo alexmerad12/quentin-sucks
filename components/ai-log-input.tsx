@@ -68,18 +68,19 @@ export function AILogInput() {
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
     latestTranscriptRef.current = "";
-    shouldAutoParseRef.current = false;
-    recognition.continuous = true;
-    recognition.interimResults = true;
+    shouldAutoParseRef.current = true; // always auto-parse when voice ends
+    recognition.continuous = false; // single utterance — stops after you pause
+    recognition.interimResults = false; // only final results — no duplicates
     recognition.lang = "en-US";
 
     recognition.onresult = (event: any) => {
-      let transcript = "";
-      for (let i = 0; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
+      // Only take the final result
+      const last = event.results[event.results.length - 1];
+      if (last.isFinal) {
+        const transcript = last[0].transcript;
+        latestTranscriptRef.current = transcript;
+        setText(transcript);
       }
-      latestTranscriptRef.current = transcript;
-      setText(transcript);
     };
 
     recognition.onerror = (event: any) => {
@@ -99,7 +100,7 @@ export function AILogInput() {
 
     recognition.start();
     setIsRecording(true);
-    toast.success("Listening... tap stop when done", { duration: 2000 });
+    toast.success("Listening... speak naturally", { duration: 2000 });
   };
 
   const stopRecording = () => {
