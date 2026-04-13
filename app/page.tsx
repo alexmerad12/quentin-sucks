@@ -1,65 +1,69 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useApp } from "@/lib/storage";
+import { UserSelector } from "@/components/user-selector";
+import { StatsCard } from "@/components/stats-card";
+import { ActivityFeed } from "@/components/activity-feed";
+import { UserSwitcher } from "@/components/user-selector";
+import Link from "next/link";
+import { Dumbbell, Database } from "lucide-react";
+import { toast } from "sonner";
+
+export default function HomePage() {
+  const { data, activeUser, loadSeedData } = useApp();
+
+  if (!activeUser) return <UserSelector />;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="space-y-6 px-4 pt-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-medium text-white/30 tracking-widest uppercase">
+            Quentin Sucks
           </p>
+          <h1 className="text-2xl font-bold text-white mt-0.5">
+            Hey, {activeUser.name}
+          </h1>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <UserSwitcher />
+      </div>
+
+      {/* Big CTA */}
+      <Link href="/log" className="block">
+        <div className="group relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 transition-all duration-300 hover:border-primary/40 active:scale-[0.98]">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/20 text-primary">
+              <Dumbbell className="h-7 w-7" />
+            </div>
+            <div>
+              <div className="text-lg font-bold text-white">Log Workout</div>
+              <div className="text-sm text-white/40">
+                Tap to start logging or talk to AI
+              </div>
+            </div>
+          </div>
+          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.03] to-transparent transition-transform duration-700 group-hover:translate-x-full" />
         </div>
-      </main>
+      </Link>
+
+      <StatsCard />
+
+      <ActivityFeed />
+
+      {/* Seed data button - only when empty */}
+      {data.entries.length === 0 && (
+        <button
+          onClick={() => {
+            loadSeedData();
+            toast.success("Demo data loaded!");
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 px-4 py-3 text-xs text-white/30 transition-colors hover:border-white/20 hover:text-white/50"
+        >
+          <Database className="h-3.5 w-3.5" />
+          Load demo data
+        </button>
+      )}
     </div>
   );
 }
