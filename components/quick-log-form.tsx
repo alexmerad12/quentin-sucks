@@ -31,24 +31,24 @@ function Stepper({
   return (
     <div className="flex flex-col items-center gap-1.5">
       <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">{label}</span>
-      <div className="flex items-center gap-0.5">
+      <div className="flex items-center gap-1.5">
         <button
           onClick={() => onChange(Math.max(min, value - step))}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-white/50 active:scale-95"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/5 text-white/50 active:scale-95"
         >
-          <Minus className="h-3.5 w-3.5" />
+          <Minus className="h-4 w-4" />
         </button>
         <input
           type="number"
           value={value || ""}
           onChange={(e) => onChange(Number(e.target.value) || 0)}
-          className="h-9 w-12 rounded-lg border border-white/10 bg-white/[0.03] text-center text-base font-bold text-white outline-none focus:border-primary/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="h-10 w-14 rounded-lg border border-white/10 bg-white/[0.03] text-center text-lg font-bold text-white outline-none focus:border-primary/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
         <button
           onClick={() => onChange(value + step)}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-white/50 active:scale-95"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/5 text-white/50 active:scale-95"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus className="h-4 w-4" />
         </button>
       </div>
     </div>
@@ -198,30 +198,32 @@ export function QuickLogForm({ exerciseId, month, week, onSaved }: QuickLogFormP
         </div>
       )}
 
-      {/* Row 1: Reps, Sets, Weight */}
-      <div className="grid grid-cols-3 gap-2">
+      {/* Reps & Sets row */}
+      <div className="grid grid-cols-2 gap-4">
         <Stepper label="Reps" value={reps} onChange={setReps} min={1} />
         <Stepper label="Sets" value={sets} onChange={setSets} min={1} />
+      </div>
+
+      {/* Weight & Max Reps row */}
+      <div className="grid grid-cols-2 gap-4">
         <Stepper
           label={exercise.usesBodyWeight ? "+lbs" : "Weight"}
           value={weight}
           onChange={setWeight}
           step={5}
         />
+        <Stepper label="Max Reps" value={maxReps} onChange={setMaxReps} min={0} />
       </div>
 
-      {/* Row 2: Max Reps + Date */}
-      <div className="grid grid-cols-2 gap-2">
-        <Stepper label="Max Reps" value={maxReps} onChange={setMaxReps} min={0} />
-        <div className="flex flex-col items-center gap-1.5">
-          <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Date</span>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="h-9 w-full rounded-lg border border-white/10 bg-white/[0.03] px-2 text-center text-sm text-white outline-none focus:border-primary/40"
-          />
-        </div>
+      {/* Date */}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Date</span>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="h-10 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 text-sm text-white outline-none focus:border-primary/40"
+        />
       </div>
 
       {/* Notes */}
