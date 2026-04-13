@@ -35,7 +35,7 @@ export function ExerciseGrid({ selected, onSelect, completedExercises }: Exercis
         {exercises.map((ex) => {
           const done = completedExercises?.has(ex.id);
           const isSelected = selected === ex.id;
-          const icon = EXERCISE_ICONS[ex.id] ?? "🔥";
+          const icon = ex.emoji || EXERCISE_ICONS[ex.id] || "🔥";
 
           return (
             <button

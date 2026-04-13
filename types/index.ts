@@ -41,4 +41,5 @@ export interface ExerciseConfig {
   substitution?: string;
   isOptional: boolean;
   isCustom?: boolean;
+  emoji?: string;
 }

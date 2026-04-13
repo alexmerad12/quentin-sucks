@@ -12,10 +12,17 @@ import {
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
+const EMOJI_OPTIONS = [
+  "💪", "🏋️", "🦵", "🔥", "⚡", "🎯", "🙌", "🔝",
+  "⬇️", "🦿", "🏃", "🚴", "🤸", "🧘", "💥", "🥊",
+  "🏊", "⛹️", "🤾", "🧗", "🎽", "🏆", "💎", "🫁",
+];
+
 export function AddExerciseDialog() {
   const { addCustomExercise, getAllExercises } = useApp();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [emoji, setEmoji] = useState("🔥");
   const [usesBodyWeight, setUsesBodyWeight] = useState(false);
 
   const handleAdd = () => {
@@ -32,13 +39,15 @@ export function AddExerciseDialog() {
     addCustomExercise({
       id,
       name: trimmed,
+      emoji,
       usesBodyWeight,
       isOptional: true,
       isCustom: true,
     });
 
-    toast.success(`Added ${trimmed}!`);
+    toast.success(`Added ${emoji} ${trimmed}!`);
     setName("");
+    setEmoji("🔥");
     setUsesBodyWeight(false);
     setOpen(false);
   };
@@ -66,6 +75,30 @@ export function AddExerciseDialog() {
             className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-primary/40"
             autoFocus
           />
+
+          {/* Emoji picker */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">
+              Pick an icon
+            </span>
+            <div className="grid grid-cols-8 gap-1">
+              {EMOJI_OPTIONS.map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => setEmoji(e)}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg text-lg transition-all active:scale-90 ${
+                    emoji === e
+                      ? "bg-primary/20 ring-1 ring-primary/40 scale-110"
+                      : "bg-white/5 hover:bg-white/10"
+                  }`}
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <label className="flex items-center gap-2 text-sm text-white/60">
             <input
               type="checkbox"
@@ -79,7 +112,7 @@ export function AddExerciseDialog() {
             onClick={handleAdd}
             className="w-full rounded-xl bg-primary py-3 text-sm font-bold text-black transition-all hover:brightness-110 active:scale-[0.98]"
           >
-            Add Exercise
+            Add {emoji} Exercise
           </button>
         </div>
       </DialogContent>
