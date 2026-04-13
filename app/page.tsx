@@ -8,9 +8,11 @@ import { UserSwitcher } from "@/components/user-selector";
 import Link from "next/link";
 import { Dumbbell, Database, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
 
 export default function HomePage() {
   const { data, activeUser, loadSeedData, clearAllData } = useApp();
+  const [confirmClear, setConfirmClear] = useState(false);
 
   if (!activeUser) return <UserSelector />;
 
@@ -65,19 +67,35 @@ export default function HomePage() {
             Load demo data
           </button>
         )}
-        {data.entries.length > 0 && (
+        {data.entries.length > 0 && !confirmClear && (
           <button
-            onClick={() => {
-              if (confirm("Delete ALL workout data? This can't be undone.")) {
-                clearAllData();
-                toast.success("All data cleared");
-              }
-            }}
+            onClick={() => setConfirmClear(true)}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-red-500/20 px-4 py-3 text-xs text-red-400/40 transition-colors hover:border-red-500/40 hover:text-red-400/70"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Clear all data
           </button>
+        )}
+        {confirmClear && (
+          <div className="flex flex-1 gap-2">
+            <button
+              onClick={() => {
+                clearAllData();
+                toast.success("All data cleared");
+                setConfirmClear(false);
+              }}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500/20 border border-red-500/30 px-4 py-3 text-xs font-bold text-red-400 active:scale-95"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Yes, delete everything
+            </button>
+            <button
+              onClick={() => setConfirmClear(false)}
+              className="flex items-center justify-center rounded-xl bg-white/5 px-4 py-3 text-xs text-white/40"
+            >
+              Cancel
+            </button>
+          </div>
         )}
       </div>
     </div>

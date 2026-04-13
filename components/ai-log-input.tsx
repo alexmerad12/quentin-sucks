@@ -178,7 +178,13 @@ export function AILogInput() {
           </button>
         </div>
         <button
-          onClick={() => doParse(text)}
+          onClick={() => {
+            if (isRecording) {
+              recognitionRef.current?.stop();
+              setIsRecording(false);
+            }
+            doParse(text);
+          }}
           disabled={!text.trim() || isLoading}
           className="flex h-[62px] w-[46px] shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-all hover:bg-primary/20 disabled:opacity-20 disabled:cursor-not-allowed active:scale-95"
         >
