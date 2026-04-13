@@ -68,25 +68,22 @@ export function AILogInput() {
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
     latestTranscriptRef.current = "";
-    shouldAutoParseRef.current = false;
-    recognition.continuous = true; // keep listening until user hits send/stop
-    recognition.interimResults = true; // show live text as they speak
+    recognition.continuous = true;
+    recognition.interimResults = false; // ONLY final results — no duplicates ever
     recognition.lang = "en-US";
     recognition.maxAlternatives = 1;
 
+    // Collect finalized segments into an array
+    const segments: string[] = [];
+
     recognition.onresult = (event: any) => {
-      // Build transcript only from final + latest interim
-      let finalText = "";
-      let interimText = "";
-      for (let i = 0; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          finalText += result[0].transcript;
-        } else {
-          interimText += result[0].transcript;
+      // Only process NEW final results (ones we haven't seen)
+      for (let i = segments.length; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          segments.push(event.results[i][0].transcript.trim());
         }
       }
-      const full = (finalText + " " + interimText).trim();
+      const full = segments.join(" ");
       latestTranscriptRef.current = full;
       setText(full);
     };
@@ -99,17 +96,19 @@ export function AILogInput() {
     };
 
     recognition.onend = () => {
-      setIsRecording(false);
+      // On mobile, recognition can auto-stop. Restart it if still recording.
+      if (isRecording) {
+        try { recognition.start(); } catch {}
+      }
     };
 
     recognition.start();
     setIsRecording(true);
-    toast.success("Listening... hit send when done", { duration: 2000 });
+    toast.success("Recording... hit send when done", { duration: 2000 });
   };
 
   const stopRecording = () => {
-    shouldAutoParseRef.current = true; // flag to auto-parse on end
-    recognitionRef.current?.stop();
+    try { recognitionRef.current?.stop(); } catch {}
     setIsRecording(false);
   };
 
