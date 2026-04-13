@@ -11,7 +11,7 @@ import { toast } from "sonner";
 interface QuickLogFormProps {
   exerciseId: string;
   month: string;
-  week: 1 | 2 | 3 | 4 | 5;
+  week: number;
   onSaved?: () => void;
 }
 
@@ -29,26 +29,26 @@ function Stepper({
   min?: number;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-1.5">
       <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">{label}</span>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         <button
           onClick={() => onChange(Math.max(min, value - step))}
-          className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5 text-white/50 transition-colors hover:bg-white/10 active:scale-95"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-white/50 active:scale-95"
         >
-          <Minus className="h-4 w-4" />
+          <Minus className="h-3.5 w-3.5" />
         </button>
         <input
           type="number"
           value={value || ""}
           onChange={(e) => onChange(Number(e.target.value) || 0)}
-          className="h-10 w-16 rounded-lg border border-white/10 bg-white/[0.03] text-center text-lg font-bold text-white outline-none focus:border-primary/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="h-9 w-12 rounded-lg border border-white/10 bg-white/[0.03] text-center text-base font-bold text-white outline-none focus:border-primary/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
         <button
           onClick={() => onChange(value + step)}
-          className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5 text-white/50 transition-colors hover:bg-white/10 active:scale-95"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-white/50 active:scale-95"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>
@@ -170,7 +170,7 @@ export function QuickLogForm({ exerciseId, month, week, onSaved }: QuickLogFormP
   };
 
   return (
-    <div className="space-y-5 rounded-2xl border border-white/5 bg-white/[0.02] p-5">
+    <div className="space-y-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -194,12 +194,12 @@ export function QuickLogForm({ exerciseId, month, week, onSaved }: QuickLogFormP
       {/* Body weight info */}
       {exercise.usesBodyWeight && (
         <div className="rounded-lg bg-primary/5 border border-primary/10 px-3 py-2 text-xs text-primary/80">
-          Body weight: {bodyWeight > 0 ? `${bodyWeight} lbs` : "Not set (update on home page)"}
+          Body weight: {bodyWeight > 0 ? `${bodyWeight} lbs` : "Not set (update on home)"}
         </div>
       )}
 
-      {/* Steppers */}
-      <div className="flex justify-around">
+      {/* Row 1: Reps, Sets, Weight */}
+      <div className="grid grid-cols-3 gap-2">
         <Stepper label="Reps" value={reps} onChange={setReps} min={1} />
         <Stepper label="Sets" value={sets} onChange={setSets} min={1} />
         <Stepper
@@ -210,15 +210,16 @@ export function QuickLogForm({ exerciseId, month, week, onSaved }: QuickLogFormP
         />
       </div>
 
-      <div className="flex justify-around">
+      {/* Row 2: Max Reps + Date */}
+      <div className="grid grid-cols-2 gap-2">
         <Stepper label="Max Reps" value={maxReps} onChange={setMaxReps} min={0} />
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-1.5">
           <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Date</span>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="h-10 rounded-lg border border-white/10 bg-white/[0.03] px-3 text-sm text-white outline-none focus:border-primary/40"
+            className="h-9 w-full rounded-lg border border-white/10 bg-white/[0.03] px-2 text-center text-sm text-white outline-none focus:border-primary/40"
           />
         </div>
       </div>
@@ -228,11 +229,11 @@ export function QuickLogForm({ exerciseId, month, week, onSaved }: QuickLogFormP
         placeholder="Notes (optional)"
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-primary/40"
+        className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-primary/40"
       />
 
       {/* Live stats */}
-      <div className="flex justify-between rounded-xl bg-white/[0.03] border border-white/5 px-4 py-3 text-xs">
+      <div className="flex justify-between rounded-xl bg-white/[0.03] border border-white/5 px-3 py-2.5 text-xs">
         <div>
           <span className="text-white/30">Vol </span>
           <span className="font-bold text-white">{volume.toLocaleString()}</span>
@@ -253,7 +254,7 @@ export function QuickLogForm({ exerciseId, month, week, onSaved }: QuickLogFormP
       <div className="flex gap-2">
         <button
           onClick={handleSave}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-black transition-all hover:brightness-110 active:scale-[0.98] shadow-[0_0_20px_rgba(74,222,128,0.2)]"
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-black transition-all hover:brightness-110 active:scale-[0.98] shadow-[0_0_20px_rgba(74,222,128,0.2)]"
         >
           <Save className="h-4 w-4" />
           {existingId ? "Update" : "Save"}
@@ -261,7 +262,7 @@ export function QuickLogForm({ exerciseId, month, week, onSaved }: QuickLogFormP
         {existingId && (
           <button
             onClick={handleDelete}
-            className="flex h-[46px] w-[46px] items-center justify-center rounded-xl bg-red-500/10 text-red-400 transition-colors hover:bg-red-500/20 active:scale-95"
+            className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-400 transition-colors hover:bg-red-500/20 active:scale-95"
           >
             <Trash2 className="h-4 w-4" />
           </button>
