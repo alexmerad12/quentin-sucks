@@ -24,7 +24,8 @@ export function AILogInput() {
   const [preview, setPreview] = useState<ParsedExercise[] | null>(null);
   const recognitionRef = useRef<any>(null);
   const latestTranscriptRef = useRef("");
-  const shouldAutoParseRef = useRef(false);
+  const isRecordingRef = useRef(false);
+  const segmentsRef = useRef<string[]>([]);
 
   const doParse = useCallback(async (inputText: string) => {
     if (!inputText.trim()) return;
@@ -58,58 +59,80 @@ export function AILogInput() {
 
   if (!activeUser) return null;
 
-  const startRecording = () => {
+  const createRecognition = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      toast.error("Speech recognition not available — use Chrome");
-      return;
-    }
+    if (!SpeechRecognition) return null;
 
     const recognition = new SpeechRecognition();
-    recognitionRef.current = recognition;
-    latestTranscriptRef.current = "";
     recognition.continuous = true;
-    recognition.interimResults = false; // ONLY final results — no duplicates ever
+    recognition.interimResults = false;
     recognition.lang = "en-US";
     recognition.maxAlternatives = 1;
 
-    // Collect finalized segments into an array
-    const segments: string[] = [];
-
     recognition.onresult = (event: any) => {
-      // Only process NEW final results (ones we haven't seen)
-      for (let i = segments.length; i < event.results.length; i++) {
+      // Only grab new final results we haven't processed yet
+      const segs = segmentsRef.current;
+      for (let i = segs.length; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
-          segments.push(event.results[i][0].transcript.trim());
+          segs.push(event.results[i][0].transcript.trim());
         }
       }
-      const full = segments.join(" ");
+      const full = segs.join(" ");
       latestTranscriptRef.current = full;
       setText(full);
     };
 
     recognition.onerror = (event: any) => {
-      setIsRecording(false);
-      if (event.error === "not-allowed") {
+      // Only stop on fatal errors, not on "no-speech"
+      if (event.error === "not-allowed" || event.error === "audio-capture") {
+        isRecordingRef.current = false;
+        setIsRecording(false);
         toast.error("Microphone access denied");
       }
     };
 
     recognition.onend = () => {
-      // On mobile, recognition can auto-stop. Restart it if still recording.
-      if (isRecording) {
-        try { recognition.start(); } catch {}
+      // Mobile browsers auto-stop recognition after a pause.
+      // If we're still supposed to be recording, spin up a new one.
+      if (isRecordingRef.current) {
+        const next = createRecognition();
+        if (next) {
+          recognitionRef.current = next;
+          try { next.start(); } catch {}
+        }
       }
     };
 
-    recognition.start();
+    return recognition;
+  };
+
+  const startRecording = () => {
+    const recognition = createRecognition();
+    if (!recognition) {
+      toast.error("Speech recognition not available — use Chrome");
+      return;
+    }
+
+    segmentsRef.current = [];
+    latestTranscriptRef.current = "";
+    recognitionRef.current = recognition;
+    isRecordingRef.current = true;
     setIsRecording(true);
-    toast.success("Recording... hit send when done", { duration: 2000 });
+    setText("");
+
+    try {
+      recognition.start();
+      toast.success("Recording... take your time, hit send when done", { duration: 2500 });
+    } catch {
+      isRecordingRef.current = false;
+      setIsRecording(false);
+    }
   };
 
   const stopRecording = () => {
-    try { recognitionRef.current?.stop(); } catch {}
+    isRecordingRef.current = false;
     setIsRecording(false);
+    try { recognitionRef.current?.stop(); } catch {}
   };
 
   const handleConfirmAll = () => {
