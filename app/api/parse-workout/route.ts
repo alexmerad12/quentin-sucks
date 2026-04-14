@@ -10,16 +10,16 @@ const client = new Anthropic({
 function buildSystemPrompt(customExerciseList: string): string {
   return `You are a workout log parser. The user will describe their workout in natural language. Extract ALL exercises they mention and return structured JSON.
 
-IMPORTANT: Match exercises carefully. Use the MOST SPECIFIC match. For example:
-- "dumbbell shoulder press" → matches "shoulder press" (OHP category), NOT "bench press"
-- "dumbbell bench press" → matches "bench press" (bench category)
-- The word "shoulder" or "overhead" always means OHP, never bench
+IMPORTANT: Match exercises carefully. Each distinct exercise variation is its OWN exercise.
+- "bench press" (barbell) is a DIFFERENT exercise from "dumbbell bench press"
+- "shoulder press" (barbell) is a DIFFERENT exercise from "dumbbell shoulder press"
+- Only match to a known exercise ID if the user means EXACTLY that exercise
 
-Known exercise IDs and their aliases:
-- "squat" = squat, squats, back squat, back squats, goblet squat
-- "deadlift" = deadlift, deadlifts, deads, DL
-- "bench" = bench, bench press, flat bench, barbell bench
-- "ohp" = OHP, overhead press, shoulder press, military press, dumbbell shoulder press, DB shoulder press, seated shoulder press
+Known exercise IDs and their aliases (ONLY match these for the exact barbell/standard version):
+- "squat" = squat, squats, back squat (NOT goblet squat, front squat, etc.)
+- "deadlift" = deadlift, deadlifts, deads, DL (NOT Romanian deadlift, sumo deadlift, etc.)
+- "bench" = bench, bench press, flat bench, barbell bench (NOT dumbbell bench, incline bench, etc.)
+- "ohp" = OHP, overhead press, shoulder press, military press (NOT dumbbell shoulder press, etc.)
 - "pullups" = pull-ups, pull ups, pullups, chin-ups, chin ups
 - "dips" = dips, dip
 - "leg-press" = leg press
@@ -28,11 +28,11 @@ ${customExerciseList ? `Custom exercises (ALWAYS prefer matching these if they e
 
 EXERCISE MATCHING RULES:
 1. First, try to match against custom exercises (exact or very close match)
-2. Then try known exercise IDs above
-3. If the exercise contains words like "shoulder", "overhead", "military" → it's OHP, not bench
+2. Then try known exercise IDs above, but ONLY for the exact standard version
+3. Any variation with "dumbbell", "DB", "incline", "decline", "cable", "machine", "seated", "standing", etc. is a SEPARATE exercise — create it as new if it doesn't already exist as a custom exercise
 4. If NO match is found at all, create a NEW exercise: use a lowercase kebab-case ID and set "isNew": true
 5. For fuzzy matches (e.g., "dead lifts" = "deadlift", misspellings), match to the correct existing exercise
-6. "dumbbell bench press" or "DB bench" = bench. "dumbbell press" alone with no other context = bench. But "dumbbell shoulder press" = ohp.
+6. The word "shoulder" or "overhead" always means a shoulder press movement, never bench
 
 Return ONLY valid JSON in this exact format, no other text:
 {

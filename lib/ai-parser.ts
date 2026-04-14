@@ -22,28 +22,18 @@ const EXERCISE_ALIASES: Record<string, string> = {
   deadlifts: "deadlift",
   dl: "deadlift",
   deads: "deadlift",
-  // Bench
+  // Bench (barbell only — dumbbell variants are separate exercises)
   bench: "bench",
   "bench press": "bench",
   "flat bench": "bench",
   "barbell bench": "bench",
   "barbell bench press": "bench",
-  "dumbbell bench press": "bench",
-  "dumbbell bench": "bench",
-  "db bench press": "bench",
-  "db bench": "bench",
-  "flat dumbbell press": "bench",
-  // OHP
+  // OHP (barbell only — dumbbell variants are separate exercises)
   ohp: "ohp",
   "overhead press": "ohp",
   "shoulder press": "ohp",
-  "dumbbell shoulder press": "ohp",
-  "db shoulder press": "ohp",
-  "seated shoulder press": "ohp",
   "military press": "ohp",
   "sitting ohp": "ohp",
-  "dumbbell press": "bench",
-  "db press": "bench",
   // Pull-ups
   pullups: "pullups",
   "pull ups": "pullups",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { nanoid } from "nanoid";
 import { useApp } from "@/lib/storage";
 import { getCurrentMonth, getCurrentWeek } from "@/lib/calculations";
 import { Sparkles, Send, Loader2, Check, X, Keyboard, Camera, Image as ImageIcon } from "lucide-react";
@@ -18,7 +19,7 @@ interface ParsedExercise {
 }
 
 export function AILogInput() {
-  const { activeUser, addEntry, addCustomExercise, getAllExercises, data } = useApp();
+  const { activeUser, getAllExercises, refreshFromServer, data } = useApp();
   const [text, setText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [preview, setPreview] = useState<ParsedExercise[] | null>(null);
@@ -103,30 +104,33 @@ export function AILogInput() {
 
   if (!activeUser) return null;
 
-  const handleConfirmAll = () => {
+  const handleConfirmAll = async () => {
     if (!preview || !activeUser) return;
 
     const month = getCurrentMonth();
     const week = getCurrentWeek();
     const date = new Date().toISOString().split("T")[0];
     const existingExercises = getAllExercises();
-    let newCount = 0;
+
+    // Build all entries and new exercises upfront
+    const newExercises: { id: string; name: string; usesBodyWeight: boolean; isOptional: boolean; isCustom: boolean }[] = [];
+    const entries: { id: string; userId: string; exercise: string; month: string; week: number; date: string; reps: number; sets: number; weight: number; maxReps: number; notes: string; createdAt: string }[] = [];
 
     for (const ex of preview) {
-      // Auto-create custom exercise if it doesn't exist
-      const exists = existingExercises.some((e) => e.id === ex.exercise);
+      const exists = existingExercises.some((e) => e.id === ex.exercise) ||
+        newExercises.some((e) => e.id === ex.exercise);
       if (!exists) {
-        addCustomExercise({
+        newExercises.push({
           id: ex.exercise,
           name: ex.exerciseName,
           usesBodyWeight: false,
           isOptional: true,
           isCustom: true,
         });
-        newCount++;
       }
 
-      addEntry({
+      entries.push({
+        id: nanoid(),
         userId: activeUser.id,
         exercise: ex.exercise,
         month,
@@ -137,12 +141,31 @@ export function AILogInput() {
         weight: ex.weight,
         maxReps: ex.maxReps || ex.reps,
         notes: ex.notes,
+        createdAt: new Date().toISOString(),
       });
     }
 
-    const parts = [`Logged ${preview.length} exercise${preview.length > 1 ? "s" : ""}`];
-    if (newCount > 0) parts.push(`created ${newCount} new`);
-    toast.success(parts.join(", ") + "!", { icon: "💪" });
+    // Send everything in a single batch request to avoid race conditions
+    try {
+      const res = await fetch("/api/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entries, customExercises: newExercises }),
+      });
+
+      if (!res.ok) throw new Error("Failed to save");
+
+      // Refresh local state from server to pick up the batch write
+      await refreshFromServer();
+
+      const parts = [`Logged ${preview.length} exercise${preview.length > 1 ? "s" : ""}`];
+      if (newExercises.length > 0) parts.push(`created ${newExercises.length} new`);
+      toast.success(parts.join(", ") + "!", { icon: "💪" });
+    } catch {
+      toast.error("Failed to save — try again");
+      return;
+    }
+
     setText("");
     setPreview(null);
     clearImage();
