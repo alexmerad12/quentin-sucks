@@ -167,20 +167,36 @@ export function AILogInput() {
         </div>
       </div>
 
-      {/* Image preview */}
+      {/* Image preview with submit button */}
       {imagePreview && (
-        <div className="relative inline-block">
-          <img
-            src={imagePreview}
-            alt="Workout log"
-            className="h-24 rounded-xl border border-white/10 object-cover"
-          />
-          <button
-            onClick={clearImage}
-            className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500/80 text-white hover:bg-red-500 transition-colors"
-          >
-            <X className="h-3 w-3" />
-          </button>
+        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/[0.03] p-3">
+          <div className="relative shrink-0">
+            <img
+              src={imagePreview}
+              alt="Workout log"
+              className="h-20 w-20 rounded-lg border border-white/10 object-cover"
+            />
+            <button
+              onClick={clearImage}
+              className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500/80 text-white hover:bg-red-500 transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+          <div className="flex flex-1 flex-col gap-2">
+            <span className="text-xs text-white/40">Photo selected — ready to read</span>
+            <button
+              onClick={() => doParse(text, imageData)}
+              disabled={isLoading}
+              className="flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-black hover:brightness-110 active:scale-95 disabled:opacity-50"
+            >
+              {isLoading ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Reading...</>
+              ) : (
+                <><Camera className="h-4 w-4" /> Read Photo</>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
@@ -188,9 +204,7 @@ export function AILogInput() {
         <div className="relative flex-1">
           <textarea
             ref={inputRef}
-            placeholder={imageData
-              ? 'Add notes (optional) then hit send...'
-              : 'Tap mic on your keyboard 🎤 or type:\n"squats 225 for 6, bench 185 for 5"'}
+            placeholder={'Tap mic on your keyboard 🎤 or type:\n"squats 225 for 6, bench 185 for 5"'}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
