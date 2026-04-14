@@ -229,7 +229,6 @@ export function AILogInput() {
           ref={fileInputRef}
           type="file"
           accept="image/jpeg,image/png,image/gif,image/webp"
-          capture="environment"
           onChange={handleImageSelect}
           className="hidden"
         />
