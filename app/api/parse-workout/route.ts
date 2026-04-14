@@ -61,7 +61,16 @@ Rules:
 - If the user mentions something like "3x225" that means 3 sets at 225 lbs (reps default to 5)
 - "225 for 5" means 225 lbs for 5 reps
 - "5x5 at 225" means 5 sets of 5 reps at 225 lbs
-- Set "isNew": true ONLY for exercises that don't match ANY known or custom exercise`;
+- Set "isNew": true ONLY for exercises that don't match ANY known or custom exercise
+
+IMAGE PARSING RULES (when reading a photo of a workout log):
+- Workout apps typically show each set as "REPS x WEIGHT unit" (e.g., "12 x 25 lb" = 12 reps at 25 lbs)
+- The number BEFORE the "x" is REPS, the number AFTER is WEIGHT
+- Count the number of lines/rows per exercise to determine SETS (e.g., 3 lines of "12 x 25 lb" = 3 sets of 12 reps at 25 lbs)
+- If sets have different reps or weights, use the most common values and set maxReps to the highest rep count
+- If sets have different weights (e.g., "10 x 15 lb" then "10 x 20 lb"), use the heaviest weight and note the variation
+- Look for exercise names as headers/titles above the set details
+- Ignore UI elements like checkmarks, icons, timers, calories, etc.`;
 }
 
 type ImageMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
