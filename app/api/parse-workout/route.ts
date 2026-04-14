@@ -1,22 +1,38 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { readServerData } from "@/lib/server-storage";
+import { EXERCISES } from "@/lib/exercises";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are a workout log parser. The user will describe their workout in natural language. Extract ALL exercises they mention and return structured JSON.
+function buildSystemPrompt(customExerciseList: string): string {
+  return `You are a workout log parser. The user will describe their workout in natural language. Extract ALL exercises they mention and return structured JSON.
+
+IMPORTANT: Match exercises carefully. Use the MOST SPECIFIC match. For example:
+- "dumbbell shoulder press" → matches "shoulder press" (OHP category), NOT "bench press"
+- "dumbbell bench press" → matches "bench press" (bench category)
+- The word "shoulder" or "overhead" always means OHP, never bench
 
 Known exercise IDs and their aliases:
-- "squat" = squat, squats, back squat
+- "squat" = squat, squats, back squat, back squats, goblet squat
 - "deadlift" = deadlift, deadlifts, deads, DL
-- "bench" = bench, bench press, flat bench, DB press, dumbbell press
-- "ohp" = OHP, overhead press, shoulder press, military press
+- "bench" = bench, bench press, flat bench, barbell bench
+- "ohp" = OHP, overhead press, shoulder press, military press, dumbbell shoulder press, DB shoulder press, seated shoulder press
 - "pullups" = pull-ups, pull ups, pullups, chin-ups, chin ups
 - "dips" = dips, dip
 - "leg-press" = leg press
 
-If the exercise doesn't match any known ID, use a lowercase kebab-case ID (e.g. "bicep-curls").
+${customExerciseList ? `Custom exercises (ALWAYS prefer matching these if they exist):\n${customExerciseList}\n` : ""}
+
+EXERCISE MATCHING RULES:
+1. First, try to match against custom exercises (exact or very close match)
+2. Then try known exercise IDs above
+3. If the exercise contains words like "shoulder", "overhead", "military" → it's OHP, not bench
+4. If NO match is found at all, create a NEW exercise: use a lowercase kebab-case ID and set "isNew": true
+5. For fuzzy matches (e.g., "dead lifts" = "deadlift", misspellings), match to the correct existing exercise
+6. "dumbbell bench press" or "DB bench" = bench. "dumbbell press" alone with no other context = bench. But "dumbbell shoulder press" = ohp.
 
 Return ONLY valid JSON in this exact format, no other text:
 {
@@ -28,7 +44,8 @@ Return ONLY valid JSON in this exact format, no other text:
       "sets": 2,
       "weight": 225,
       "maxReps": 6,
-      "notes": ""
+      "notes": "",
+      "isNew": false
     }
   ]
 }
@@ -43,28 +60,67 @@ Rules:
 - notes should capture any extra context like "felt easy", "bad form", etc.
 - If the user mentions something like "3x225" that means 3 sets at 225 lbs (reps default to 5)
 - "225 for 5" means 225 lbs for 5 reps
-- "5x5 at 225" means 5 sets of 5 reps at 225 lbs`;
+- "5x5 at 225" means 5 sets of 5 reps at 225 lbs
+- Set "isNew": true ONLY for exercises that don't match ANY known or custom exercise`;
+}
+
+type ImageMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 
 export async function POST(req: NextRequest) {
   try {
-    const { text } = await req.json();
+    const body = await req.json();
+    const { text, image, imageMediaType } = body as {
+      text?: string;
+      image?: string; // base64 encoded image
+      imageMediaType?: ImageMediaType;
+    };
 
-    if (!text || typeof text !== "string") {
-      return NextResponse.json({ error: "No text provided" }, { status: 400 });
+    if (!text && !image) {
+      return NextResponse.json({ error: "No text or image provided" }, { status: 400 });
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json({ error: "API key not configured" }, { status: 500 });
     }
 
+    // Build custom exercise list from server data
+    const serverData = readServerData();
+    const allExercises = [...EXERCISES, ...(serverData.customExercises || [])];
+    const customExerciseList = allExercises
+      .map((e) => `- "${e.id}" = ${e.name}`)
+      .join("\n");
+
+    // Build message content — text, image, or both
+    const contentParts: Anthropic.MessageCreateParams["messages"][0]["content"] = [];
+
+    if (image) {
+      contentParts.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: imageMediaType || "image/jpeg",
+          data: image,
+        },
+      });
+      // Add instruction for image parsing
+      contentParts.push({
+        type: "text",
+        text: text
+          ? `Here is an image of my workout log. Also: ${text}`
+          : "Read this image of my workout log and extract all exercises, sets, reps, and weights you can see.",
+      });
+    } else {
+      contentParts.push({ type: "text", text: text! });
+    }
+
     const message = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
+      system: buildSystemPrompt(customExerciseList),
       messages: [
         {
           role: "user",
-          content: text,
+          content: contentParts,
         },
       ],
     });

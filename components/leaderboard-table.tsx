@@ -3,8 +3,9 @@
 import { useApp } from "@/lib/storage";
 import { USER_LIST } from "@/lib/constants";
 import { calcVolume, getEffectiveWeight } from "@/lib/calculations";
-import type { UserId, WorkoutEntry } from "@/types";
-import { Trophy, Crown, Medal, Dumbbell, TrendingUp, Flame, Weight } from "lucide-react";
+import { inferCategory } from "@/lib/exercises";
+import type { UserId, WorkoutEntry, ExerciseConfig } from "@/types";
+import { Trophy, Crown, Dumbbell, Flame } from "lucide-react";
 
 interface LeaderboardProps {
   month: string;
@@ -51,6 +52,35 @@ function CategorySection({ icon, title, children, accent }: {
   );
 }
 
+function ExerciseRankRow({ rank, name, stats }: {
+  rank: number;
+  name: string;
+  stats: { volume: number; best: number; entries: WorkoutEntry[] };
+}) {
+  const style = RANK_STYLES[rank] ?? { color: "text-white/30", bg: "bg-white/[0.02]", border: "border-transparent" };
+  return (
+    <div className={`flex items-center justify-between rounded-xl border px-4 py-3 ${style.border} ${style.bg}`}>
+      <div className="flex items-center gap-3">
+        <span className={`text-lg font-black ${style.color}`}>{rank + 1}</span>
+        <div>
+          <div className="text-sm font-medium text-white">{name}</div>
+          <div className="text-[10px] text-white/25">{stats.entries.length} entries</div>
+        </div>
+      </div>
+      <div className="flex items-center gap-4 text-xs">
+        <div className="text-right">
+          <div className="font-bold text-white">{stats.volume.toLocaleString()}</div>
+          <div className="text-white/25">volume</div>
+        </div>
+        <div className="text-right">
+          <div className="font-bold text-primary">{stats.best} lbs</div>
+          <div className="text-white/25">best</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Leaderboard({ month }: LeaderboardProps) {
   const { getEntries, getBodyWeight, getAllExercises } = useApp();
   const exercises = getAllExercises();
@@ -81,6 +111,19 @@ export function Leaderboard({ month }: LeaderboardProps) {
       }
     }
 
+    // Also check for entries with exercise IDs not in exercises list
+    const knownIds = new Set(exercises.map((e) => e.id));
+    for (const entry of allEntries) {
+      if (!knownIds.has(entry.exercise) && !perExercise[entry.exercise]) {
+        const exEntries = allEntries.filter((e) => e.exercise === entry.exercise);
+        perExercise[entry.exercise] = {
+          volume: exEntries.reduce((s, e) => s + calcVolume(e, bodyWeight), 0),
+          best: Math.max(...exEntries.map((e) => getEffectiveWeight(e, bodyWeight))),
+          entries: exEntries,
+        };
+      }
+    }
+
     return { userId, name: u.name, totalVolume, heaviestLift, entryCount, exerciseCount, perExercise };
   });
 
@@ -100,20 +143,54 @@ export function Leaderboard({ month }: LeaderboardProps) {
   const byHeaviest = [...userStats].filter((u) => u.entryCount > 0).sort((a, b) => b.heaviestLift - a.heaviestLift);
   const byConsistency = [...userStats].filter((u) => u.entryCount > 0).sort((a, b) => b.entryCount - a.entryCount);
 
-  // Per-exercise winners
-  const exerciseWinners = exercises.map((ex) => {
-    const ranked = userStats
-      .filter((u) => u.perExercise[ex.id])
-      .sort((a, b) => (b.perExercise[ex.id]?.volume ?? 0) - (a.perExercise[ex.id]?.volume ?? 0));
+  // Build category → exercises map for the breakdown
+  // Collect all exercise IDs that have data
+  const exerciseIdsWithData = new Set<string>();
+  for (const u of userStats) {
+    for (const exId of Object.keys(u.perExercise)) {
+      exerciseIdsWithData.add(exId);
+    }
+  }
 
-    if (ranked.length === 0) return null;
+  // Build exercise config lookup (for known + custom exercises)
+  const exerciseMap = new Map<string, ExerciseConfig>();
+  for (const ex of exercises) {
+    exerciseMap.set(ex.id, ex);
+  }
+  // For unknown exercise IDs, create a placeholder config
+  for (const exId of exerciseIdsWithData) {
+    if (!exerciseMap.has(exId)) {
+      exerciseMap.set(exId, {
+        id: exId,
+        name: exId.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
+        usesBodyWeight: false,
+        isOptional: true,
+        isCustom: true,
+      });
+    }
+  }
 
-    return {
-      exercise: ex,
-      winner: ranked[0],
-      ranked,
-    };
-  }).filter(Boolean) as { exercise: typeof exercises[0]; winner: typeof userStats[0]; ranked: typeof userStats }[];
+  // Group exercises by category
+  const categoryGroups = new Map<string, ExerciseConfig[]>();
+  for (const exId of exerciseIdsWithData) {
+    const ex = exerciseMap.get(exId)!;
+    const category = inferCategory(ex);
+    if (!categoryGroups.has(category)) {
+      categoryGroups.set(category, []);
+    }
+    categoryGroups.get(category)!.push(ex);
+  }
+
+  // Sort categories: put known categories first, "Other" last
+  const categoryOrder = ["Squat", "Deadlift", "Bench", "Shoulder Press", "Pull", "Push", "Legs", "Arms"];
+  const sortedCategories = [...categoryGroups.entries()].sort((a, b) => {
+    const ai = categoryOrder.indexOf(a[0]);
+    const bi = categoryOrder.indexOf(b[0]);
+    if (ai === -1 && bi === -1) return a[0].localeCompare(b[0]);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
 
   return (
     <div className="space-y-4">
@@ -166,54 +243,62 @@ export function Leaderboard({ month }: LeaderboardProps) {
         ))}
       </CategorySection>
 
-      {/* Per-Exercise Winners */}
-      {exerciseWinners.length > 0 && (
+      {/* Exercise Breakdown by Category */}
+      {sortedCategories.length > 0 && (
         <div className="space-y-1.5">
           <h2 className="text-xs font-medium text-white/30 tracking-widest uppercase px-1 pt-2">
             Exercise Breakdown
           </h2>
 
-          {exerciseWinners.map(({ exercise, ranked }) => (
-            <CategorySection
-              key={exercise.id}
-              icon={<span className="text-base">{(exercise as any).emoji || "🏋️"}</span>}
-              title={exercise.name}
-            >
-              {ranked.map((u, i) => {
-                const stats = u.perExercise[exercise.id];
-                return (
-                  <div
-                    key={u.userId}
-                    className={`flex items-center justify-between rounded-xl border px-4 py-3 ${
-                      RANK_STYLES[i]?.border ?? "border-transparent"
-                    } ${RANK_STYLES[i]?.bg ?? "bg-white/[0.02]"}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={`text-lg font-black ${RANK_STYLES[i]?.color ?? "text-white/30"}`}>
-                        {i + 1}
-                      </span>
-                      <div>
-                        <div className="text-sm font-medium text-white">{u.name}</div>
-                        <div className="text-[10px] text-white/25">
-                          {stats?.entries.length} entries
+          {sortedCategories.map(([category, categoryExercises]) => {
+            // Sort exercises within category alphabetically
+            const sorted = [...categoryExercises].sort((a, b) => a.name.localeCompare(b.name));
+            const hasMultiple = sorted.length > 1;
+
+            return (
+              <div key={category} className="rounded-2xl border border-white/5 bg-white/[0.02] overflow-hidden">
+                <div className="flex items-center gap-2 border-b border-white/5 px-4 py-3">
+                  <span className="text-base">🏋️</span>
+                  <span className="text-sm font-bold text-white">{category}</span>
+                  {hasMultiple && (
+                    <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-white/30">
+                      {sorted.length} variants
+                    </span>
+                  )}
+                </div>
+
+                <div className="p-3 space-y-3">
+                  {sorted.map((exercise) => {
+                    const ranked = userStats
+                      .filter((u) => u.perExercise[exercise.id])
+                      .sort((a, b) => (b.perExercise[exercise.id]?.volume ?? 0) - (a.perExercise[exercise.id]?.volume ?? 0));
+
+                    if (ranked.length === 0) return null;
+
+                    return (
+                      <div key={exercise.id}>
+                        {hasMultiple && (
+                          <div className="text-[10px] font-semibold text-white/40 uppercase tracking-wider px-1 mb-1.5">
+                            {exercise.name}
+                          </div>
+                        )}
+                        <div className="space-y-1.5">
+                          {ranked.map((u, i) => (
+                            <ExerciseRankRow
+                              key={u.userId}
+                              rank={i}
+                              name={u.name}
+                              stats={u.perExercise[exercise.id]}
+                            />
+                          ))}
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs">
-                      <div className="text-right">
-                        <div className="font-bold text-white">{stats?.volume.toLocaleString()}</div>
-                        <div className="text-white/25">volume</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-primary">{stats?.best} lbs</div>
-                        <div className="text-white/25">best</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </CategorySection>
-          ))}
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

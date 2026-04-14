@@ -42,4 +42,5 @@ export interface ExerciseConfig {
   isOptional: boolean;
   isCustom?: boolean;
   emoji?: string;
+  category?: string;
 }
