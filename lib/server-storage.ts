@@ -1,9 +1,7 @@
-import fs from "fs";
-import path from "path";
+import { kv } from "@vercel/kv";
 import type { AppData, UserId, User } from "@/types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DATA_FILE = path.join(DATA_DIR, "app-data.json");
+const KV_KEY = "app-data";
 
 function getDefaultUsers(): Record<UserId, User> {
   const users = {} as Record<UserId, User>;
@@ -34,28 +32,24 @@ function getDefaultData(): AppData {
   };
 }
 
-function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
-
-export function readServerData(): AppData {
-  ensureDataDir();
+export async function readServerData(): Promise<AppData> {
   try {
-    if (!fs.existsSync(DATA_FILE)) {
+    const data = await kv.get<AppData>(KV_KEY);
+    if (!data) {
       const defaultData = getDefaultData();
-      fs.writeFileSync(DATA_FILE, JSON.stringify(defaultData, null, 2));
+      await kv.set(KV_KEY, defaultData);
       return defaultData;
     }
-    const raw = fs.readFileSync(DATA_FILE, "utf-8");
-    return JSON.parse(raw) as AppData;
+    return data;
   } catch {
     return getDefaultData();
   }
 }
 
-export function writeServerData(data: AppData) {
-  ensureDataDir();
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+export async function writeServerData(data: AppData): Promise<void> {
+  try {
+    await kv.set(KV_KEY, data);
+  } catch (err) {
+    console.error("Failed to write to KV:", err);
+  }
 }

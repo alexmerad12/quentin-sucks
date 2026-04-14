@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
       month: string;
       weight: number;
     };
-    const data = readServerData();
+    const data = await readServerData();
     const user = data.users[userId];
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     } else {
       user.bodyWeights.push({ month, weight });
     }
-    writeServerData(data);
+    await writeServerData(data);
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 });

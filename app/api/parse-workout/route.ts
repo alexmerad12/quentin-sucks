@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Build custom exercise list from server data
-    const serverData = readServerData();
+    const serverData = await readServerData();
     const allExercises = [...EXERCISES, ...(serverData.customExercises || [])];
     const customExerciseList = allExercises
       .map((e) => `- "${e.id}" = ${e.name}`)
