@@ -170,27 +170,7 @@ export function Leaderboard({ month }: LeaderboardProps) {
     }
   }
 
-  // Group exercises by category
-  const categoryGroups = new Map<string, ExerciseConfig[]>();
-  for (const exId of exerciseIdsWithData) {
-    const ex = exerciseMap.get(exId)!;
-    const category = inferCategory(ex);
-    if (!categoryGroups.has(category)) {
-      categoryGroups.set(category, []);
-    }
-    categoryGroups.get(category)!.push(ex);
-  }
-
-  // Sort categories: put known categories first, "Other" last
   const categoryOrder = ["Squat", "Deadlift", "Bench", "Shoulder Press", "Pull", "Push", "Legs", "Arms"];
-  const sortedCategories = [...categoryGroups.entries()].sort((a, b) => {
-    const ai = categoryOrder.indexOf(a[0]);
-    const bi = categoryOrder.indexOf(b[0]);
-    if (ai === -1 && bi === -1) return a[0].localeCompare(b[0]);
-    if (ai === -1) return 1;
-    if (bi === -1) return -1;
-    return ai - bi;
-  });
 
   return (
     <div className="space-y-4">
@@ -243,64 +223,65 @@ export function Leaderboard({ month }: LeaderboardProps) {
         ))}
       </CategorySection>
 
-      {/* Exercise Breakdown by Category */}
-      {sortedCategories.length > 0 && (
-        <div className="space-y-1.5">
-          <h2 className="text-xs font-medium text-white/30 tracking-widest uppercase px-1 pt-2">
-            Exercise Breakdown
-          </h2>
+      {/* Exercise Breakdown — each exercise gets its own card */}
+      {(() => {
+        // Flatten all exercises with data into a single list, sorted by category then name
+        const allExercisesWithData = [...exerciseIdsWithData]
+          .map((exId) => exerciseMap.get(exId)!)
+          .sort((a, b) => {
+            const catA = inferCategory(a);
+            const catB = inferCategory(b);
+            const orderA = categoryOrder.indexOf(catA);
+            const orderB = categoryOrder.indexOf(catB);
+            const sortA = orderA === -1 ? 999 : orderA;
+            const sortB = orderB === -1 ? 999 : orderB;
+            if (sortA !== sortB) return sortA - sortB;
+            return a.name.localeCompare(b.name);
+          });
 
-          {sortedCategories.map(([category, categoryExercises]) => {
-            // Sort exercises within category alphabetically
-            const sorted = [...categoryExercises].sort((a, b) => a.name.localeCompare(b.name));
-            const hasMultiple = sorted.length > 1;
+        if (allExercisesWithData.length === 0) return null;
 
-            return (
-              <div key={category} className="rounded-2xl border border-white/5 bg-white/[0.02] overflow-hidden">
-                <div className="flex items-center gap-2 border-b border-white/5 px-4 py-3">
-                  <span className="text-base">🏋️</span>
-                  <span className="text-sm font-bold text-white">{category}</span>
-                  {hasMultiple && (
-                    <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-white/30">
-                      {sorted.length} variants
+        return (
+          <div className="space-y-1.5">
+            <h2 className="text-xs font-medium text-white/30 tracking-widest uppercase px-1 pt-2">
+              Exercise Breakdown
+            </h2>
+
+            {allExercisesWithData.map((exercise) => {
+              const category = inferCategory(exercise);
+              const ranked = userStats
+                .filter((u) => u.perExercise[exercise.id])
+                .sort((a, b) => (b.perExercise[exercise.id]?.volume ?? 0) - (a.perExercise[exercise.id]?.volume ?? 0));
+
+              if (ranked.length === 0) return null;
+
+              return (
+                <div key={exercise.id} className="rounded-2xl border border-white/5 bg-white/[0.02] overflow-hidden">
+                  <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{(exercise as any).emoji || "🏋️"}</span>
+                      <span className="text-sm font-bold text-white">{exercise.name}</span>
+                    </div>
+                    <span className="rounded bg-white/5 px-2 py-0.5 text-[9px] text-white/25 uppercase tracking-wider">
+                      {category}
                     </span>
-                  )}
+                  </div>
+                  <div className="p-3 space-y-1.5">
+                    {ranked.map((u, i) => (
+                      <ExerciseRankRow
+                        key={u.userId}
+                        rank={i}
+                        name={u.name}
+                        stats={u.perExercise[exercise.id]}
+                      />
+                    ))}
+                  </div>
                 </div>
-
-                <div className="p-3 space-y-3">
-                  {sorted.map((exercise) => {
-                    const ranked = userStats
-                      .filter((u) => u.perExercise[exercise.id])
-                      .sort((a, b) => (b.perExercise[exercise.id]?.volume ?? 0) - (a.perExercise[exercise.id]?.volume ?? 0));
-
-                    if (ranked.length === 0) return null;
-
-                    return (
-                      <div key={exercise.id}>
-                        {hasMultiple && (
-                          <div className="text-[10px] font-semibold text-white/40 uppercase tracking-wider px-1 mb-1.5">
-                            {exercise.name}
-                          </div>
-                        )}
-                        <div className="space-y-1.5">
-                          {ranked.map((u, i) => (
-                            <ExerciseRankRow
-                              key={u.userId}
-                              rank={i}
-                              name={u.name}
-                              stats={u.perExercise[exercise.id]}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        );
+      })()}
     </div>
   );
 }
