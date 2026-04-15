@@ -1,4 +1,6 @@
-// Minimal service worker required for PWA install prompt
+// Service worker required for PWA install prompt
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
-self.addEventListener("fetch", () => {});
+self.addEventListener("fetch", (e) => {
+  e.respondWith(fetch(e.request));
+});
