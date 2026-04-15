@@ -32,6 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} dark h-full antialiased`}>
       <body className="min-h-full font-sans" style={{ backgroundColor: "#0d0d0d", color: "#f2f2f2" }}>
+        <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js')` }} />
         <AppProvider>
           <main className="mx-auto max-w-lg pb-24 pt-2">{children}</main>
           <NavBar />
