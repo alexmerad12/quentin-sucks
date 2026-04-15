@@ -48,12 +48,25 @@ Return ONLY valid JSON in this exact format, no other text:
       "isNew": false,
       "category": "Squat",
       "isDumbbell": false,
-      "usesBodyWeight": false
+      "usesBodyWeight": false,
+      "emoji": "🦵"
     }
   ]
 }
 
 Category must be one of: "Squat", "Deadlift", "Bench", "Shoulder Press", "Pull", "Push", "Legs", "Arms", or "Other".
+Pick an emoji that matches the exercise. Use these guidelines:
+- Chest/bench/push-ups: 💪
+- Shoulders/OHP: 🙌
+- Back/rows/pull: 🔝
+- Biceps/curls: 💪
+- Triceps/dips/kickbacks: ⬇️
+- Legs/squat/lunge: 🦵
+- Deadlift: 🏋️
+- Cardio/running: 🏃
+- Core/abs/crunches: 🔥
+- Boxing/striking: 🥊
+- General/other: ⚡
 Set isDumbbell to true if the exercise uses dumbbells (weight entered is per arm).
 Set usesBodyWeight to true for exercises where your body is the resistance (pull-ups, dips, bench dips, push-ups, crunches, bicycle crunches, planks, lunges, etc.). For these exercises the user's body weight is added to any additional weight.
 

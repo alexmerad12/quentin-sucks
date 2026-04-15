@@ -19,6 +19,7 @@ interface ParsedExercise {
   category?: string;
   isDumbbell?: boolean;
   usesBodyWeight?: boolean;
+  emoji?: string;
 }
 
 interface AILogInputProps {
@@ -149,6 +150,7 @@ export function AILogInput({ month: selectedMonth, week: selectedWeek }: AILogIn
           isCustom: true,
           category: ex.category,
           isDumbbell: ex.isDumbbell || false,
+          emoji: ex.emoji,
         });
       }
 

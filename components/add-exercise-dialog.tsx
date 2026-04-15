@@ -13,9 +13,16 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 const EMOJI_OPTIONS = [
-  "💪", "🏋️", "🦵", "🔥", "⚡", "🎯", "🙌", "🔝",
-  "⬇️", "🦿", "🏃", "🚴", "🤸", "🧘", "💥", "🥊",
-  "🏊", "⛹️", "🤾", "🧗", "🎽", "🏆", "💎", "🫁",
+  // Upper body
+  "💪", "🏋️", "🙌", "🤜", "👊", "🫸",
+  // Lower body
+  "🦵", "🦿", "🏃", "🚶",
+  // Full body / cardio
+  "🔥", "⚡", "💥", "🤸", "🧘", "🏊", "🚴", "⛹️",
+  // Specific exercises
+  "🔝", "⬇️", "↕️", "🔄", "🎯", "🪢",
+  // Equipment
+  "🥊", "🧗", "🤾", "🏆", "💎", "🫁", "⏱️", "🎽",
 ];
 
 export function AddExerciseDialog() {
