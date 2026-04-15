@@ -4,7 +4,9 @@ import { useApp } from "@/lib/storage";
 import { UserSelector } from "@/components/user-selector";
 import { StatsCard } from "@/components/stats-card";
 import { ActivityFeed } from "@/components/activity-feed";
+import { BodyWeightInput } from "@/components/body-weight-input";
 import { UserSwitcher } from "@/components/user-selector";
+import { getCurrentMonth } from "@/lib/calculations";
 import Link from "next/link";
 import { Dumbbell, Database, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -48,6 +50,9 @@ export default function HomePage() {
           <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.03] to-transparent transition-transform duration-700 group-hover:translate-x-full" />
         </div>
       </Link>
+
+      {/* Body weight — used for pull-ups, dips, etc. */}
+      <BodyWeightInput month={getCurrentMonth()} />
 
       <StatsCard />
 

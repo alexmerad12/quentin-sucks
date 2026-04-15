@@ -161,6 +161,12 @@ function ExerciseBreakdown({ exercises: sorted, userStats }: {
                       <div className="text-[11px] pl-7 mt-1">
                         <span className="text-white/60">{be.reps}r × {be.sets}s @ </span>
                         <span className="font-bold text-primary">{stats.best} lbs</span>
+                        {exercise.usesBodyWeight && be.weight > 0 && (
+                          <span className="text-white/25"> (BW+{be.weight})</span>
+                        )}
+                        {exercise.usesBodyWeight && be.weight === 0 && (
+                          <span className="text-white/25"> (BW)</span>
+                        )}
                         <span className="text-white/25"> = {stats.bestVolume.toLocaleString()} vol</span>
                         {db && <span className="text-blue-400 ml-1">({getAdjustedWeight(stats.best, exercise)} adj)</span>}
                       </div>
