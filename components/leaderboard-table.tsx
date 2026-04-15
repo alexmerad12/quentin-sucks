@@ -87,27 +87,28 @@ export function Leaderboard({ month }: LeaderboardProps) {
     const exerciseCount = new Set(allEntries.map((e) => e.exercise)).size;
 
     // Per-exercise stats
-    const perExercise: Record<string, { volume: number; best: number; entries: WorkoutEntry[] }> = {};
+    const perExercise: Record<string, { volume: number; best: number; totalReps: number; entries: WorkoutEntry[] }> = {};
     const knownIds = new Set(exercises.map((e) => e.id));
+
+    function buildExStats(exEntries: WorkoutEntry[]) {
+      return {
+        volume: exEntries.reduce((s, e) => s + calcVolume(e, bodyWeight), 0),
+        best: Math.max(...exEntries.map((e) => getEffectiveWeight(e, bodyWeight))),
+        totalReps: exEntries.reduce((s, e) => s + e.reps * e.sets, 0),
+        entries: exEntries,
+      };
+    }
 
     for (const ex of exercises) {
       const exEntries = allEntries.filter((e) => e.exercise === ex.id);
       if (exEntries.length > 0) {
-        perExercise[ex.id] = {
-          volume: exEntries.reduce((s, e) => s + calcVolume(e, bodyWeight), 0),
-          best: Math.max(...exEntries.map((e) => getEffectiveWeight(e, bodyWeight))),
-          entries: exEntries,
-        };
+        perExercise[ex.id] = buildExStats(exEntries);
       }
     }
     for (const entry of allEntries) {
       if (!knownIds.has(entry.exercise) && !perExercise[entry.exercise]) {
         const exEntries = allEntries.filter((e) => e.exercise === entry.exercise);
-        perExercise[entry.exercise] = {
-          volume: exEntries.reduce((s, e) => s + calcVolume(e, bodyWeight), 0),
-          best: Math.max(...exEntries.map((e) => getEffectiveWeight(e, bodyWeight))),
-          entries: exEntries,
-        };
+        perExercise[entry.exercise] = buildExStats(exEntries);
       }
     }
 
@@ -207,17 +208,27 @@ export function Leaderboard({ month }: LeaderboardProps) {
             const sorted = [...categoryExercises].sort((a, b) => a.name.localeCompare(b.name));
             const hasDumbbellVariant = sorted.some(isDumbbellExercise);
 
-            // Combined category ranking — adjusted best weight across all variants
+            // Check if entire category is bodyweight-only
+            const isCategoryBodyweight = sorted.every((ex) => {
+              const usersWithEx = userStats.filter((u) => u.perExercise[ex.id]);
+              return usersWithEx.length === 0 || usersWithEx.every(
+                (u) => u.perExercise[ex.id].entries.every((e) => e.weight === 0)
+              );
+            });
+
+            // Combined category ranking
             const combinedRanking = userStats
               .map((u) => {
                 let bestAdjusted = 0;
                 let bestRaw = 0;
                 let bestExName = "";
                 let totalAdjustedVolume = 0;
+                let totalCategoryReps = 0;
 
                 for (const ex of sorted) {
                   const stats = u.perExercise[ex.id];
                   if (!stats) continue;
+                  totalCategoryReps += stats.totalReps;
                   const adjusted = getAdjustedWeight(stats.best, ex);
                   totalAdjustedVolume += stats.entries.reduce((sum, entry) => {
                     const rawVol = entry.reps * entry.sets * entry.weight;
@@ -230,10 +241,12 @@ export function Leaderboard({ month }: LeaderboardProps) {
                   }
                 }
 
-                return { ...u, bestAdjusted, bestRaw, bestExName, totalAdjustedVolume };
+                return { ...u, bestAdjusted, bestRaw, bestExName, totalAdjustedVolume, totalCategoryReps };
               })
-              .filter((u) => u.bestAdjusted > 0)
-              .sort((a, b) => b.bestAdjusted - a.bestAdjusted);
+              .filter((u) => isCategoryBodyweight ? u.totalCategoryReps > 0 : u.bestAdjusted > 0)
+              .sort((a, b) => isCategoryBodyweight
+                ? b.totalCategoryReps - a.totalCategoryReps
+                : b.bestAdjusted - a.bestAdjusted);
 
             if (combinedRanking.length === 0) return null;
 
@@ -257,9 +270,14 @@ export function Leaderboard({ month }: LeaderboardProps) {
                         <span className="text-[10px] font-semibold text-primary/60 uppercase tracking-wider">
                           Combined Ranking
                         </span>
-                        {hasDumbbellVariant && (
+                        {hasDumbbellVariant && !isCategoryBodyweight && (
                           <span className="text-[9px] text-white/20 ml-1">
                             (DB: per arm ×2 + 15% difficulty)
+                          </span>
+                        )}
+                        {isCategoryBodyweight && (
+                          <span className="text-[9px] text-white/20 ml-1">
+                            (ranked by reps)
                           </span>
                         )}
                       </div>
@@ -272,9 +290,19 @@ export function Leaderboard({ month }: LeaderboardProps) {
                                 <span className={`text-lg font-black ${style.color}`}>{i + 1}</span>
                                 <div>
                                   <div className="text-sm font-medium text-white">{u.name}</div>
-                                  <div className="text-[10px] text-white/25">via {u.bestExName}</div>
+                                  {!isCategoryBodyweight && (
+                                    <div className="text-[10px] text-white/25">via {u.bestExName}</div>
+                                  )}
                                 </div>
                               </div>
+                              {isCategoryBodyweight ? (
+                              <div className="flex items-center gap-4 text-xs">
+                                <div className="text-right">
+                                  <div className="font-bold text-white">{u.totalCategoryReps.toLocaleString()}</div>
+                                  <div className="text-white/25">total reps</div>
+                                </div>
+                              </div>
+                              ) : (
                               <div className="flex items-center gap-4 text-xs">
                                 <div className="text-right">
                                   <div className="font-bold text-white">{u.totalAdjustedVolume.toLocaleString()}</div>
@@ -285,6 +313,7 @@ export function Leaderboard({ month }: LeaderboardProps) {
                                   <div className="text-white/25">adj. best</div>
                                 </div>
                               </div>
+                              )}
                             </div>
                           );
                         })}
@@ -294,11 +323,18 @@ export function Leaderboard({ month }: LeaderboardProps) {
 
                   {/* Per-exercise breakdown */}
                   {sorted.map((exercise) => {
-                    const ranked = userStats
-                      .filter((u) => u.perExercise[exercise.id])
-                      .sort((a, b) => (b.perExercise[exercise.id]?.volume ?? 0) - (a.perExercise[exercise.id]?.volume ?? 0));
+                    const usersWithData = userStats.filter((u) => u.perExercise[exercise.id]);
+                    if (usersWithData.length === 0) return null;
 
-                    if (ranked.length === 0) return null;
+                    // Detect if this is a pure bodyweight exercise (no one logged weight)
+                    const isBodyweightOnly = usersWithData.every(
+                      (u) => u.perExercise[exercise.id].best === 0 ||
+                        (exercise.usesBodyWeight && u.perExercise[exercise.id].entries.every((e) => e.weight === 0))
+                    );
+
+                    const ranked = isBodyweightOnly
+                      ? [...usersWithData].sort((a, b) => (b.perExercise[exercise.id]?.totalReps ?? 0) - (a.perExercise[exercise.id]?.totalReps ?? 0))
+                      : [...usersWithData].sort((a, b) => (b.perExercise[exercise.id]?.volume ?? 0) - (a.perExercise[exercise.id]?.volume ?? 0));
 
                     const db = isDumbbellExercise(exercise);
 
@@ -310,6 +346,9 @@ export function Leaderboard({ month }: LeaderboardProps) {
                           </span>
                           {db && (
                             <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[9px] text-blue-400">DB</span>
+                          )}
+                          {isBodyweightOnly && (
+                            <span className="rounded bg-orange-500/10 px-1.5 py-0.5 text-[9px] text-orange-400">BW</span>
                           )}
                         </div>
                         <div className="space-y-1.5">
@@ -325,6 +364,20 @@ export function Leaderboard({ month }: LeaderboardProps) {
                                     <div className="text-[10px] text-white/25">{stats.entries.length} entries</div>
                                   </div>
                                 </div>
+                                {isBodyweightOnly ? (
+                                  <div className="flex items-center gap-3 text-xs">
+                                    <div className="text-right">
+                                      <div className="font-bold text-white">{stats.totalReps.toLocaleString()}</div>
+                                      <div className="text-white/25">total reps</div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="font-bold text-primary">
+                                        {Math.max(...stats.entries.map((e) => e.reps))}
+                                      </div>
+                                      <div className="text-white/25">best set</div>
+                                    </div>
+                                  </div>
+                                ) : (
                                 <div className="flex items-center gap-3 text-xs">
                                   <div className="text-right">
                                     <div className="font-bold text-white">{stats.volume.toLocaleString()}</div>
@@ -341,6 +394,7 @@ export function Leaderboard({ month }: LeaderboardProps) {
                                     </div>
                                   )}
                                 </div>
+                                )}
                               </div>
                             );
                           })}

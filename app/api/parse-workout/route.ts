@@ -47,13 +47,15 @@ Return ONLY valid JSON in this exact format, no other text:
       "notes": "",
       "isNew": false,
       "category": "Squat",
-      "isDumbbell": false
+      "isDumbbell": false,
+      "usesBodyWeight": false
     }
   ]
 }
 
 Category must be one of: "Squat", "Deadlift", "Bench", "Shoulder Press", "Pull", "Push", "Legs", "Arms", or "Other".
 Set isDumbbell to true if the exercise uses dumbbells (weight entered is per arm).
+Set usesBodyWeight to true for exercises where your body is the resistance (pull-ups, dips, bench dips, push-ups, crunches, bicycle crunches, planks, lunges, etc.). For these exercises the user's body weight is added to any additional weight.
 
 Rules:
 - If reps aren't mentioned, default to 5

@@ -18,6 +18,7 @@ interface ParsedExercise {
   isNew?: boolean;
   category?: string;
   isDumbbell?: boolean;
+  usesBodyWeight?: boolean;
 }
 
 interface AILogInputProps {
@@ -143,7 +144,7 @@ export function AILogInput({ month: selectedMonth, week: selectedWeek }: AILogIn
         newExercises.push({
           id: ex.exercise,
           name: ex.exerciseName,
-          usesBodyWeight: false,
+          usesBodyWeight: ex.usesBodyWeight || false,
           isOptional: true,
           isCustom: true,
           category: ex.category,
