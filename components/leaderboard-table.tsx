@@ -5,7 +5,8 @@ import { USER_LIST } from "@/lib/constants";
 import { calcVolume, getEffectiveWeight } from "@/lib/calculations";
 import { inferCategory } from "@/lib/exercises";
 import type { UserId, WorkoutEntry, ExerciseConfig } from "@/types";
-import { Trophy, Crown, Dumbbell, Flame, Scale } from "lucide-react";
+import { useState } from "react";
+import { Trophy, Crown, Dumbbell, Flame, Scale, ChevronDown, ChevronRight } from "lucide-react";
 
 interface LeaderboardProps {
   month: string;
@@ -70,6 +71,109 @@ function CategorySection({ icon, title, children, accent }: {
   );
 }
 
+function ExerciseBreakdown({ exercises: sorted, userStats }: {
+  exercises: ExerciseConfig[];
+  userStats: { userId: string; name: string; perExercise: Record<string, { bestVolume: number; best: number; bestReps: number; bestSets: number; bestEntry: WorkoutEntry; totalReps: number; entries: WorkoutEntry[] }> }[];
+}) {
+  const [expandedSolo, setExpandedSolo] = useState<Set<string>>(new Set());
+
+  const toggleSolo = (exId: string) => {
+    setExpandedSolo((prev) => {
+      const next = new Set(prev);
+      if (next.has(exId)) next.delete(exId);
+      else next.add(exId);
+      return next;
+    });
+  };
+
+  return (
+    <>
+      {sorted.map((exercise) => {
+        const usersWithData = userStats.filter((u) => u.perExercise[exercise.id]);
+        if (usersWithData.length === 0) return null;
+
+        const isBodyweightOnly = usersWithData.every(
+          (u) => u.perExercise[exercise.id].best === 0 ||
+            (exercise.usesBodyWeight && u.perExercise[exercise.id].entries.every((e) => e.weight === 0))
+        );
+
+        // Sort by best single entry volume (or totalReps for bodyweight)
+        const ranked = isBodyweightOnly
+          ? [...usersWithData].sort((a, b) => (b.perExercise[exercise.id]?.totalReps ?? 0) - (a.perExercise[exercise.id]?.totalReps ?? 0))
+          : [...usersWithData].sort((a, b) => (b.perExercise[exercise.id]?.bestVolume ?? 0) - (a.perExercise[exercise.id]?.bestVolume ?? 0));
+
+        const db = isDumbbellExercise(exercise);
+        const isSolo = ranked.length === 1;
+        const isExpanded = expandedSolo.has(exercise.id);
+
+        // Solo exercise — collapsed by default
+        if (isSolo && !isExpanded) {
+          const u = ranked[0];
+          const stats = u.perExercise[exercise.id];
+          return (
+            <button
+              key={exercise.id}
+              onClick={() => toggleSolo(exercise.id)}
+              className="flex items-center justify-between w-full rounded-lg bg-white/[0.02] border border-white/5 px-3 py-2 text-left"
+            >
+              <div className="flex items-center gap-2">
+                <ChevronRight className="h-3 w-3 text-white/20" />
+                <span className="text-[10px] font-semibold text-white/30 uppercase">{exercise.name}</span>
+              </div>
+              <span className="text-[10px] text-white/20">{u.name} only</span>
+            </button>
+          );
+        }
+
+        return (
+          <div key={exercise.id}>
+            <div className="flex items-center gap-2 px-1 mb-1.5">
+              {isSolo && (
+                <button onClick={() => toggleSolo(exercise.id)} className="text-white/20 hover:text-white/40">
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              )}
+              <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">
+                {exercise.name}
+              </span>
+              {db && <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[9px] text-blue-400">DB</span>}
+              {isBodyweightOnly && <span className="rounded bg-orange-500/10 px-1.5 py-0.5 text-[9px] text-orange-400">BW</span>}
+            </div>
+            <div className="space-y-1.5">
+              {ranked.map((u, i) => {
+                const stats = u.perExercise[exercise.id];
+                const style = RANK_STYLES[i] ?? { color: "text-white/30", bg: "bg-white/[0.02]", border: "border-transparent" };
+                return (
+                  <div key={u.userId} className={`rounded-xl border px-4 py-2.5 ${style.border} ${style.bg}`}>
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <span className={`text-base font-black ${style.color}`}>{i + 1}</span>
+                      <span className="text-sm font-medium text-white">{u.name}</span>
+                      <span className="text-[10px] text-white/20">best of {stats.entries.length}</span>
+                    </div>
+                    {isBodyweightOnly ? (
+                      <div className="flex gap-4 text-xs pl-7">
+                        <span><span className="font-bold text-primary">{Math.max(...stats.entries.map((e) => e.reps))}</span><span className="text-white/25 ml-1">best reps</span></span>
+                        <span><span className="font-bold text-white">{stats.totalReps.toLocaleString()}</span><span className="text-white/25 ml-1">total</span></span>
+                      </div>
+                    ) : (
+                      <div className="flex gap-3 text-[11px] pl-7">
+                        <span><span className="font-bold text-primary">{stats.best}</span><span className="text-white/25">lb×{stats.bestReps}r</span></span>
+                        <span><span className="font-bold text-white">{stats.bestEntry.reps}r×{stats.bestEntry.sets}s</span></span>
+                        <span><span className="font-bold text-white">{stats.bestVolume.toLocaleString()}</span><span className="text-white/25">v</span></span>
+                        {db && <span><span className="font-bold text-blue-400">{getAdjustedWeight(stats.best, exercise)}</span><span className="text-white/25">adj</span></span>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 export function Leaderboard({ month }: LeaderboardProps) {
   const { getEntries, getBodyWeight, getAllExercises } = useApp();
   const exercises = getAllExercises();
@@ -96,24 +200,35 @@ export function Leaderboard({ month }: LeaderboardProps) {
     const entryCount = allEntries.length;
     const exerciseCount = new Set(allEntries.map((e) => e.exercise)).size;
 
-    // Per-exercise stats
-    const perExercise: Record<string, { volume: number; best: number; bestReps: number; totalReps: number; entries: WorkoutEntry[] }> = {};
+    // Per-exercise stats — use BEST single entry, not sum of all weeks
+    const perExercise: Record<string, { bestVolume: number; best: number; bestReps: number; bestSets: number; bestEntry: WorkoutEntry; totalReps: number; entries: WorkoutEntry[] }> = {};
     const knownIds = new Set(exercises.map((e) => e.id));
 
     function buildExStats(exEntries: WorkoutEntry[]) {
       let best = 0;
       let bestReps = 0;
+      let bestVolume = 0;
+      let bestSets = 0;
+      let bestEntry = exEntries[0];
       for (const e of exEntries) {
         const w = getEffectiveWeight(e, bodyWeight);
+        const v = calcVolume(e, bodyWeight);
         if (w > best) {
           best = w;
           bestReps = e.reps;
         }
+        if (v > bestVolume) {
+          bestVolume = v;
+          bestSets = e.sets;
+          bestEntry = e;
+        }
       }
       return {
-        volume: exEntries.reduce((s, e) => s + calcVolume(e, bodyWeight), 0),
+        bestVolume,
         best,
         bestReps,
+        bestSets,
+        bestEntry,
         totalReps: exEntries.reduce((s, e) => s + e.reps * e.sets, 0),
         entries: exEntries,
       };
@@ -342,72 +457,7 @@ export function Leaderboard({ month }: LeaderboardProps) {
                   )}
 
                   {/* Per-exercise breakdown */}
-                  {sorted.map((exercise) => {
-                    const usersWithData = userStats.filter((u) => u.perExercise[exercise.id]);
-                    if (usersWithData.length === 0) return null;
-
-                    // Detect if this is a pure bodyweight exercise (no one logged weight)
-                    const isBodyweightOnly = usersWithData.every(
-                      (u) => u.perExercise[exercise.id].best === 0 ||
-                        (exercise.usesBodyWeight && u.perExercise[exercise.id].entries.every((e) => e.weight === 0))
-                    );
-
-                    const ranked = isBodyweightOnly
-                      ? [...usersWithData].sort((a, b) => (b.perExercise[exercise.id]?.totalReps ?? 0) - (a.perExercise[exercise.id]?.totalReps ?? 0))
-                      : [...usersWithData].sort((a, b) => (b.perExercise[exercise.id]?.volume ?? 0) - (a.perExercise[exercise.id]?.volume ?? 0));
-
-                    const db = isDumbbellExercise(exercise);
-
-                    return (
-                      <div key={exercise.id}>
-                        <div className="flex items-center gap-2 px-1 mb-1.5">
-                          <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">
-                            {exercise.name}
-                          </span>
-                          {db && (
-                            <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[9px] text-blue-400">DB</span>
-                          )}
-                          {isBodyweightOnly && (
-                            <span className="rounded bg-orange-500/10 px-1.5 py-0.5 text-[9px] text-orange-400">BW</span>
-                          )}
-                        </div>
-                        <div className="space-y-1.5">
-                          {ranked.map((u, i) => {
-                            const stats = u.perExercise[exercise.id];
-                            const style = RANK_STYLES[i] ?? { color: "text-white/30", bg: "bg-white/[0.02]", border: "border-transparent" };
-                            return (
-                              <div key={u.userId} className={`rounded-xl border px-4 py-2.5 ${style.border} ${style.bg}`}>
-                                <div className="flex items-center gap-3 mb-1.5">
-                                  <span className={`text-base font-black ${style.color}`}>{i + 1}</span>
-                                  <span className="text-sm font-medium text-white">{u.name}</span>
-                                  <span className="text-[10px] text-white/20">{stats.entries.length} entries</span>
-                                </div>
-                                {isBodyweightOnly ? (
-                                  <div className="flex gap-4 text-xs pl-7">
-                                    <div>
-                                      <span className="font-bold text-white">{stats.totalReps.toLocaleString()}</span>
-                                      <span className="text-white/25 ml-1">reps</span>
-                                    </div>
-                                    <div>
-                                      <span className="font-bold text-primary">{Math.max(...stats.entries.map((e) => e.reps))}</span>
-                                      <span className="text-white/25 ml-1">best set</span>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="flex gap-3 text-[11px] pl-7">
-                                    <span><span className="font-bold text-primary">{stats.best}</span><span className="text-white/25">lb×{stats.bestReps}r</span></span>
-                                    <span><span className="font-bold text-white">{stats.totalReps}</span><span className="text-white/25">r</span></span>
-                                    <span><span className="font-bold text-white">{stats.volume.toLocaleString()}</span><span className="text-white/25">v</span></span>
-                                    {db && <span><span className="font-bold text-blue-400">{getAdjustedWeight(stats.best, exercise)}</span><span className="text-white/25">adj</span></span>}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <ExerciseBreakdown exercises={sorted} userStats={userStats} />
                 </div>
               </div>
             );
