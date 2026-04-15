@@ -81,20 +81,39 @@ export function Leaderboard({ month }: LeaderboardProps) {
     const bodyWeight = getBodyWeight(userId, month);
 
     const totalVolume = allEntries.reduce((sum, e) => sum + calcVolume(e, bodyWeight), 0);
-    const heaviestLift = allEntries.length
-      ? Math.max(...allEntries.map((e) => getEffectiveWeight(e, bodyWeight)))
-      : 0;
+
+    // Find heaviest lift AND the reps done at that weight
+    let heaviestLift = 0;
+    let heaviestReps = 0;
+    for (const e of allEntries) {
+      const w = getEffectiveWeight(e, bodyWeight);
+      if (w > heaviestLift) {
+        heaviestLift = w;
+        heaviestReps = e.reps;
+      }
+    }
+
     const entryCount = allEntries.length;
     const exerciseCount = new Set(allEntries.map((e) => e.exercise)).size;
 
     // Per-exercise stats
-    const perExercise: Record<string, { volume: number; best: number; totalReps: number; entries: WorkoutEntry[] }> = {};
+    const perExercise: Record<string, { volume: number; best: number; bestReps: number; totalReps: number; entries: WorkoutEntry[] }> = {};
     const knownIds = new Set(exercises.map((e) => e.id));
 
     function buildExStats(exEntries: WorkoutEntry[]) {
+      let best = 0;
+      let bestReps = 0;
+      for (const e of exEntries) {
+        const w = getEffectiveWeight(e, bodyWeight);
+        if (w > best) {
+          best = w;
+          bestReps = e.reps;
+        }
+      }
       return {
         volume: exEntries.reduce((s, e) => s + calcVolume(e, bodyWeight), 0),
-        best: Math.max(...exEntries.map((e) => getEffectiveWeight(e, bodyWeight))),
+        best,
+        bestReps,
         totalReps: exEntries.reduce((s, e) => s + e.reps * e.sets, 0),
         entries: exEntries,
       };
@@ -113,7 +132,7 @@ export function Leaderboard({ month }: LeaderboardProps) {
       }
     }
 
-    return { userId, name: u.name, totalVolume, heaviestLift, entryCount, exerciseCount, perExercise };
+    return { userId, name: u.name, totalVolume, heaviestLift, heaviestReps, entryCount, exerciseCount, perExercise };
   });
 
   const hasData = userStats.some((u) => u.entryCount > 0);
@@ -187,7 +206,7 @@ export function Leaderboard({ month }: LeaderboardProps) {
       {/* Heaviest Lifter */}
       <CategorySection icon={<Dumbbell className="h-4 w-4 text-red-400" />} title="Heaviest Single Lift">
         {byHeaviest.map((u, i) => (
-          <RankCard key={u.userId} rank={i} name={u.name} value={u.heaviestLift + " lbs"} label="heaviest weight" />
+          <RankCard key={u.userId} rank={i} name={u.name} value={u.heaviestLift + " lbs × " + u.heaviestReps + " reps"} label="heaviest weight" />
         ))}
       </CategorySection>
 
@@ -386,7 +405,7 @@ export function Leaderboard({ month }: LeaderboardProps) {
                                   </div>
                                   <div className="text-right">
                                     <div className="font-bold text-primary">{stats.best} lbs</div>
-                                    <div className="text-white/25">{db ? "per arm" : "best"}</div>
+                                    <div className="text-white/25">{db ? "per arm" : "best"} × {stats.bestReps}r</div>
                                   </div>
                                   {db && (
                                     <div className="text-right">
