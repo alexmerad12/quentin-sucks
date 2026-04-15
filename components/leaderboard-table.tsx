@@ -400,6 +400,10 @@ export function Leaderboard({ month }: LeaderboardProps) {
                                 ) : (
                                 <div className="flex items-center gap-3 text-xs">
                                   <div className="text-right">
+                                    <div className="font-bold text-white">{stats.totalReps}</div>
+                                    <div className="text-white/25">reps</div>
+                                  </div>
+                                  <div className="text-right">
                                     <div className="font-bold text-white">{stats.volume.toLocaleString()}</div>
                                     <div className="text-white/25">volume</div>
                                   </div>
