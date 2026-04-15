@@ -1,26 +1,8 @@
 import { kv } from "@vercel/kv";
-import type { AppData, UserId, User } from "@/types";
+import type { AppData } from "@/types";
+import { getDefaultUsers } from "./constants";
 
 const KV_KEY = "app-data";
-
-function getDefaultUsers(): Record<UserId, User> {
-  const users = {} as Record<UserId, User>;
-  const list = [
-    { id: "alex" as UserId, name: "Alex", defaultBodyWeight: 200 },
-    { id: "dan" as UserId, name: "Dan", defaultBodyWeight: 185 },
-    { id: "quentin" as UserId, name: "Quentin", defaultBodyWeight: 0 },
-  ];
-  for (const u of list) {
-    users[u.id] = {
-      id: u.id,
-      name: u.name,
-      bodyWeights: u.defaultBodyWeight
-        ? [{ month: "2024-11", weight: u.defaultBodyWeight }]
-        : [],
-    };
-  }
-  return users;
-}
 
 function getDefaultData(): AppData {
   return {

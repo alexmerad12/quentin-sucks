@@ -23,6 +23,7 @@ const RANK_STYLES = [
 const DUMBBELL_MULTIPLIER = 2 * 1.15; // per-arm → total + 15% difficulty bonus
 
 function isDumbbellExercise(ex: ExerciseConfig): boolean {
+  if (ex.isDumbbell) return true;
   const lower = ex.name.toLowerCase();
   return lower.includes("dumbbell") || lower.includes("db ");
 }

@@ -60,7 +60,7 @@ export function ActivityFeed() {
                     <span className="text-xs text-primary/80">{exercise?.name ?? entry.exercise}</span>
                   </div>
                   <div className="text-xs text-white/30">
-                    {entry.reps}r × {entry.sets}s × {effectiveWt}lbs
+                    {entry.reps}r × {entry.sets}s × {effectiveWt} lbs
                     {entry.notes && (
                       <span className="ml-1 italic text-white/15">— {entry.notes}</span>
                     )}

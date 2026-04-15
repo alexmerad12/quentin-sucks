@@ -94,7 +94,7 @@ export function QuickLogForm({ exerciseId, month, week, onSaved }: QuickLogFormP
       setReps(last.reps);
       setSets(last.sets);
       setWeight(last.weight);
-      setMaxReps(0);
+      setMaxReps(last.maxReps || 0);
       setNotes("");
     } else {
       setReps(5);
@@ -157,7 +157,7 @@ export function QuickLogForm({ exerciseId, month, week, onSaved }: QuickLogFormP
   };
 
   const handleDelete = () => {
-    if (existingId) {
+    if (existingId && confirm("Delete this entry?")) {
       deleteEntry(existingId);
       setExistingId(null);
       setReps(5);

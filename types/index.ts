@@ -43,4 +43,5 @@ export interface ExerciseConfig {
   isCustom?: boolean;
   emoji?: string;
   category?: string;
+  isDumbbell?: boolean;
 }

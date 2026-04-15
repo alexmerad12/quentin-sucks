@@ -79,7 +79,7 @@ export function WeeklyTable({ exerciseId, userId, month }: WeeklyTableProps) {
               entry={entry}
               bodyWeight={bodyWeight}
               usesBodyWeight={exercise?.usesBodyWeight ?? false}
-              onDelete={() => deleteEntry(entry.id)}
+              onDelete={() => { if (confirm("Delete this entry?")) deleteEntry(entry.id); }}
             />
           ))}
         </div>

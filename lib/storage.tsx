@@ -6,6 +6,7 @@ import type { AppData, UserId, WorkoutEntry, User, ExerciseConfig } from "@/type
 import { getDefaultUsers } from "./constants";
 import { getSeedData } from "./seed-data";
 import { EXERCISES } from "./exercises";
+import { toast } from "sonner";
 
 const STORAGE_KEY = "lift-tracker-data";
 
@@ -94,6 +95,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<AppData>(getDefaultData);
   const [loaded, setLoaded] = useState(false);
   const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const syncInFlight = useRef(0);
 
   // Load from server on mount, fall back to localStorage
   useEffect(() => {
@@ -121,6 +123,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Poll server every 30s to pick up changes from other users
   const refreshFromServer = useCallback(async () => {
+    // Skip poll if a sync write is in progress to avoid overwriting optimistic updates
+    if (syncInFlight.current > 0) return;
     const serverData = await fetchServerData();
     if (serverData) {
       setData((prev) => {
@@ -157,6 +161,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [persist]
   );
 
+  // Track in-flight syncs to prevent poll from overwriting optimistic updates
+  const trackedSync = useCallback((endpoint: string, method: string, body: unknown) => {
+    syncInFlight.current++;
+    syncToServer(endpoint, method, body).then((ok) => {
+      syncInFlight.current--;
+      if (!ok) toast.error("Failed to sync — try refreshing");
+    });
+  }, []);
+
   const addEntry = useCallback(
     (entry: Omit<WorkoutEntry, "id" | "createdAt">) => {
       const full: WorkoutEntry = {
@@ -165,9 +178,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
       };
       persist((d) => ({ ...d, entries: [...d.entries, full] }));
-      syncToServer("/api/entries", "POST", full);
+      trackedSync("/api/entries", "POST", full);
     },
-    [persist]
+    [persist, trackedSync]
   );
 
   const updateEntry = useCallback(
@@ -176,9 +189,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...d,
         entries: d.entries.map((e) => (e.id === id ? { ...e, ...updates } : e)),
       }));
-      syncToServer("/api/entries", "PATCH", { id, updates });
+      trackedSync("/api/entries", "PATCH", { id, updates });
     },
-    [persist]
+    [persist, trackedSync]
   );
 
   const deleteEntry = useCallback(
@@ -187,9 +200,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...d,
         entries: d.entries.filter((e) => e.id !== id),
       }));
-      syncToServer("/api/entries", "DELETE", { id });
+      trackedSync("/api/entries", "DELETE", { id });
     },
-    [persist]
+    [persist, trackedSync]
   );
 
   const setBodyWeight = useCallback(
@@ -206,9 +219,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           users: { ...d.users, [userId]: { ...user, bodyWeights } },
         };
       });
-      syncToServer("/api/body-weight", "POST", { userId, month, weight });
+      trackedSync("/api/body-weight", "POST", { userId, month, weight });
     },
-    [persist]
+    [persist, trackedSync]
   );
 
   const getBodyWeight = useCallback(
@@ -288,9 +301,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...d,
         customExercises: [...(d.customExercises || []), exercise],
       }));
-      syncToServer("/api/custom-exercises", "POST", exercise);
+      trackedSync("/api/custom-exercises", "POST", exercise);
     },
-    [persist]
+    [persist, trackedSync]
   );
 
   const removeCustomExercise = useCallback(
@@ -299,9 +312,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...d,
         customExercises: (d.customExercises || []).filter((e) => e.id !== id),
       }));
-      syncToServer("/api/custom-exercises", "DELETE", { id });
+      trackedSync("/api/custom-exercises", "DELETE", { id });
     },
-    [persist]
+    [persist, trackedSync]
   );
 
   const getAllExercises = useCallback((): ExerciseConfig[] => {

@@ -134,7 +134,7 @@ export function AILogInput({ month: selectedMonth, week: selectedWeek }: AILogIn
     const existingExercises = getAllExercises();
 
     // Build all entries and new exercises upfront
-    const newExercises: { id: string; name: string; usesBodyWeight: boolean; isOptional: boolean; isCustom: boolean; category?: string }[] = [];
+    const newExercises: { id: string; name: string; usesBodyWeight: boolean; isOptional: boolean; isCustom: boolean; category?: string; isDumbbell?: boolean }[] = [];
     const entries: { id: string; userId: string; exercise: string; month: string; week: number; date: string; reps: number; sets: number; weight: number; maxReps: number; notes: string; createdAt: string }[] = [];
 
     for (const ex of preview) {
@@ -148,6 +148,7 @@ export function AILogInput({ month: selectedMonth, week: selectedWeek }: AILogIn
           isOptional: true,
           isCustom: true,
           category: ex.category,
+          isDumbbell: ex.isDumbbell || false,
         });
       }
 
