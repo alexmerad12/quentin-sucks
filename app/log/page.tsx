@@ -33,7 +33,7 @@ export default function LogPage() {
       </div>
 
       {/* AI Quick Log */}
-      <AILogInput />
+      <AILogInput month={month} week={week} />
 
       {/* Month + Week selector */}
       <MonthPicker month={month} onChange={(m) => { setMonth(m); setWeek(1); }} />

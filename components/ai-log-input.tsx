@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { nanoid } from "nanoid";
 import { useApp } from "@/lib/storage";
-import { getCurrentMonth, getCurrentWeek } from "@/lib/calculations";
+// month and week are now passed as props
 import { Sparkles, Send, Loader2, Check, X, Keyboard, Camera, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,7 +18,12 @@ interface ParsedExercise {
   isNew?: boolean;
 }
 
-export function AILogInput() {
+interface AILogInputProps {
+  month: string;
+  week: number;
+}
+
+export function AILogInput({ month: selectedMonth, week: selectedWeek }: AILogInputProps) {
   const { activeUser, getAllExercises, refreshFromServer, data } = useApp();
   const [text, setText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -107,9 +112,20 @@ export function AILogInput() {
   const handleConfirmAll = async () => {
     if (!preview || !activeUser) return;
 
-    const month = getCurrentMonth();
-    const week = getCurrentWeek();
-    const date = new Date().toISOString().split("T")[0];
+    const month = selectedMonth;
+    const week = selectedWeek;
+    // Use today's date if logging for current month/week, otherwise use first day of the selected week
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const currentWeek = Math.ceil(now.getDate() / 7);
+    let date: string;
+    if (month === currentMonth && week === currentWeek) {
+      date = now.toISOString().split("T")[0];
+    } else {
+      const [y, m] = month.split("-").map(Number);
+      const day = (week - 1) * 7 + 1;
+      date = `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    }
     const existingExercises = getAllExercises();
 
     // Build all entries and new exercises upfront
