@@ -89,38 +89,18 @@ export function AILogInput({ month: selectedMonth, week: selectedWeek }: AILogIn
       return;
     }
 
-    // Resize image to max 2000px wide (keeps long screenshots readable, reduces payload)
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      const MAX_WIDTH = 2000;
-      const MAX_HEIGHT = 8000;
-      let { width, height } = img;
-
-      // Scale down if needed
-      if (width > MAX_WIDTH) {
-        height = Math.round(height * (MAX_WIDTH / width));
-        width = MAX_WIDTH;
-      }
-      if (height > MAX_HEIGHT) {
-        width = Math.round(width * (MAX_HEIGHT / height));
-        height = MAX_HEIGHT;
-      }
-
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // Convert to JPEG for smaller size
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-      setImagePreview(dataUrl);
-      const base64 = dataUrl.split(",")[1];
-      setImageData({ base64, mediaType: "image/jpeg" });
+    // Read the file directly as base64 — simple and reliable on all devices
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setImagePreview(result);
+      const base64 = result.split(",")[1];
+      setImageData({ base64, mediaType: file.type });
     };
-    img.src = objectUrl;
+    reader.onerror = () => {
+      toast.error("Failed to read image");
+    };
+    reader.readAsDataURL(file);
 
     // Reset file input so same file can be re-selected
     e.target.value = "";
