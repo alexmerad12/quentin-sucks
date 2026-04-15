@@ -97,24 +97,28 @@ export function Leaderboard({ month }: LeaderboardProps) {
     const exerciseCount = new Set(allEntries.map((e) => e.exercise)).size;
 
     // Per-exercise stats
-    const perExercise: Record<string, { volume: number; best: number; bestReps: number; totalReps: number; entries: WorkoutEntry[] }> = {};
+    const perExercise: Record<string, { volume: number; best: number; bestReps: number; bestSets: number; totalReps: number; totalSets: number; entries: WorkoutEntry[] }> = {};
     const knownIds = new Set(exercises.map((e) => e.id));
 
     function buildExStats(exEntries: WorkoutEntry[]) {
       let best = 0;
       let bestReps = 0;
+      let bestSets = 0;
       for (const e of exEntries) {
         const w = getEffectiveWeight(e, bodyWeight);
         if (w > best) {
           best = w;
           bestReps = e.reps;
+          bestSets = e.sets;
         }
       }
       return {
         volume: exEntries.reduce((s, e) => s + calcVolume(e, bodyWeight), 0),
         best,
         bestReps,
+        bestSets,
         totalReps: exEntries.reduce((s, e) => s + e.reps * e.sets, 0),
+        totalSets: exEntries.reduce((s, e) => s + e.sets, 0),
         entries: exEntries,
       };
     }
@@ -391,6 +395,10 @@ export function Leaderboard({ month }: LeaderboardProps) {
                                       <div className="text-white/25">total reps</div>
                                     </div>
                                     <div className="text-right">
+                                      <div className="font-bold text-white/60">{stats.totalSets}</div>
+                                      <div className="text-white/25">total sets</div>
+                                    </div>
+                                    <div className="text-right">
                                       <div className="font-bold text-primary">
                                         {Math.max(...stats.entries.map((e) => e.reps))}
                                       </div>
@@ -400,12 +408,16 @@ export function Leaderboard({ month }: LeaderboardProps) {
                                 ) : (
                                 <div className="flex items-center gap-3 text-xs">
                                   <div className="text-right">
-                                    <div className="font-bold text-white">{stats.volume.toLocaleString()}</div>
-                                    <div className="text-white/25">volume</div>
+                                    <div className="font-bold text-white">{stats.bestReps}r × {stats.bestSets}s</div>
+                                    <div className="text-white/25">@ {db ? "per arm" : "best"}</div>
                                   </div>
                                   <div className="text-right">
                                     <div className="font-bold text-primary">{stats.best} lbs</div>
-                                    <div className="text-white/25">{db ? "per arm" : "best"} × {stats.bestReps}r</div>
+                                    <div className="text-white/25">{db ? "per arm" : "best wt"}</div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="font-bold text-white/60">{stats.volume.toLocaleString()}</div>
+                                    <div className="text-white/25">volume</div>
                                   </div>
                                   {db && (
                                     <div className="text-right">
