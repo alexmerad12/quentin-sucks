@@ -351,39 +351,50 @@ export function Leaderboard({ month }: LeaderboardProps) {
               );
             });
 
-            // Combined category ranking
+            // Combined category ranking — use best single entry per exercise, not sum
             const combinedRanking = userStats
               .map((u) => {
                 let bestAdjusted = 0;
-                let bestRaw = 0;
+                let bestAdjustedVolume = 0;
                 let bestExName = "";
-                let totalAdjustedVolume = 0;
-                let totalCategoryReps = 0;
+                let bestCategoryReps = 0;
 
                 for (const ex of sorted) {
                   const stats = u.perExercise[ex.id];
                   if (!stats) continue;
-                  totalCategoryReps += stats.totalReps;
+
+                  // Best single-entry reps for bodyweight
+                  const topReps = Math.max(...stats.entries.map((e) => e.reps * e.sets));
+                  if (topReps > bestCategoryReps) bestCategoryReps = topReps;
+
+                  // Best adjusted weight
                   const adjusted = getAdjustedWeight(stats.best, ex);
-                  totalAdjustedVolume += stats.entries.reduce((sum, entry) => {
-                    const rawVol = entry.reps * entry.sets * entry.weight;
-                    return sum + (isDumbbellExercise(ex) ? Math.round(rawVol * DUMBBELL_MULTIPLIER) : rawVol);
-                  }, 0);
+
+                  // Best single-entry adjusted volume
+                  const entryAdjVol = isDumbbellExercise(ex)
+                    ? Math.round(stats.bestVolume * DUMBBELL_MULTIPLIER)
+                    : stats.bestVolume;
+
                   if (adjusted > bestAdjusted) {
                     bestAdjusted = adjusted;
-                    bestRaw = stats.best;
                     bestExName = ex.name;
+                  }
+                  if (entryAdjVol > bestAdjustedVolume) {
+                    bestAdjustedVolume = entryAdjVol;
                   }
                 }
 
-                return { ...u, bestAdjusted, bestRaw, bestExName, totalAdjustedVolume, totalCategoryReps };
+                return { ...u, bestAdjusted, bestAdjustedVolume, bestExName, bestCategoryReps };
               })
-              .filter((u) => isCategoryBodyweight ? u.totalCategoryReps > 0 : u.bestAdjusted > 0)
+              .filter((u) => isCategoryBodyweight ? u.bestCategoryReps > 0 : u.bestAdjusted > 0)
               .sort((a, b) => isCategoryBodyweight
-                ? b.totalCategoryReps - a.totalCategoryReps
+                ? b.bestCategoryReps - a.bestCategoryReps
                 : b.bestAdjusted - a.bestAdjusted);
 
             if (combinedRanking.length === 0) return null;
+
+            // How many unique users have data in this category?
+            const usersInCategory = combinedRanking.length;
 
             return (
               <div key={category} className="rounded-2xl border border-white/5 bg-white/[0.02] overflow-hidden">
@@ -397,8 +408,8 @@ export function Leaderboard({ month }: LeaderboardProps) {
                 </div>
 
                 <div className="p-3 space-y-3">
-                  {/* Combined ranking */}
-                  {sorted.length > 1 && (
+                  {/* Combined ranking — only show when 2+ people compete */}
+                  {sorted.length > 1 && usersInCategory > 1 && (
                     <div>
                       <div className="flex items-center gap-1.5 px-1 mb-1.5">
                         <Scale className="h-3 w-3 text-primary/50" />
@@ -406,49 +417,31 @@ export function Leaderboard({ month }: LeaderboardProps) {
                           Combined Ranking
                         </span>
                         {hasDumbbellVariant && !isCategoryBodyweight && (
-                          <span className="text-[9px] text-white/20 ml-1">
-                            (DB: per arm ×2 + 15% difficulty)
-                          </span>
-                        )}
-                        {isCategoryBodyweight && (
-                          <span className="text-[9px] text-white/20 ml-1">
-                            (ranked by reps)
-                          </span>
+                          <span className="text-[9px] text-white/20 ml-1">(DB adjusted)</span>
                         )}
                       </div>
                       <div className="space-y-1.5">
                         {combinedRanking.map((u, i) => {
                           const style = RANK_STYLES[i] ?? { color: "text-white/30", bg: "bg-white/[0.02]", border: "border-transparent" };
                           return (
-                            <div key={u.userId} className={`flex items-center justify-between rounded-xl border px-4 py-3 ${style.border} ${style.bg}`}>
-                              <div className="flex items-center gap-3">
-                                <span className={`text-lg font-black ${style.color}`}>{i + 1}</span>
-                                <div>
-                                  <div className="text-sm font-medium text-white">{u.name}</div>
-                                  {!isCategoryBodyweight && (
-                                    <div className="text-[10px] text-white/25">via {u.bestExName}</div>
-                                  )}
-                                </div>
+                            <div key={u.userId} className={`rounded-xl border px-4 py-2.5 ${style.border} ${style.bg}`}>
+                              <div className="flex items-center gap-3 mb-1">
+                                <span className={`text-base font-black ${style.color}`}>{i + 1}</span>
+                                <span className="text-sm font-medium text-white">{u.name}</span>
+                                {!isCategoryBodyweight && (
+                                  <span className="text-[10px] text-white/20">via {u.bestExName}</span>
+                                )}
                               </div>
-                              {isCategoryBodyweight ? (
-                              <div className="flex items-center gap-4 text-xs">
-                                <div className="text-right">
-                                  <div className="font-bold text-white">{u.totalCategoryReps.toLocaleString()}</div>
-                                  <div className="text-white/25">total reps</div>
-                                </div>
+                              <div className="flex gap-3 text-[11px] pl-7">
+                                {isCategoryBodyweight ? (
+                                  <span><span className="font-bold text-primary">{u.bestCategoryReps}</span><span className="text-white/25"> best reps</span></span>
+                                ) : (
+                                  <>
+                                    <span><span className="font-bold text-primary">{u.bestAdjusted}</span><span className="text-white/25">lb best</span></span>
+                                    <span><span className="font-bold text-white">{u.bestAdjustedVolume.toLocaleString()}</span><span className="text-white/25">v best</span></span>
+                                  </>
+                                )}
                               </div>
-                              ) : (
-                              <div className="flex items-center gap-4 text-xs">
-                                <div className="text-right">
-                                  <div className="font-bold text-white">{u.totalAdjustedVolume.toLocaleString()}</div>
-                                  <div className="text-white/25">adj. vol</div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-bold text-primary">{u.bestAdjusted} lbs</div>
-                                  <div className="text-white/25">adj. best</div>
-                                </div>
-                              </div>
-                              )}
                             </div>
                           );
                         })}
