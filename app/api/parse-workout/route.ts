@@ -45,10 +45,15 @@ Return ONLY valid JSON in this exact format, no other text:
       "weight": 225,
       "maxReps": 6,
       "notes": "",
-      "isNew": false
+      "isNew": false,
+      "category": "Squat",
+      "isDumbbell": false
     }
   ]
 }
+
+Category must be one of: "Squat", "Deadlift", "Bench", "Shoulder Press", "Pull", "Push", "Legs", "Arms", or "Other".
+Set isDumbbell to true if the exercise uses dumbbells (weight entered is per arm).
 
 Rules:
 - If reps aren't mentioned, default to 5

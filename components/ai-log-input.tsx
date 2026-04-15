@@ -16,6 +16,8 @@ interface ParsedExercise {
   maxReps: number;
   notes: string;
   isNew?: boolean;
+  category?: string;
+  isDumbbell?: boolean;
 }
 
 interface AILogInputProps {
@@ -81,22 +83,44 @@ export function AILogInput({ month: selectedMonth, week: selectedWeek }: AILogIn
       return;
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Image must be under 10MB");
+    // Validate file size (max 20MB raw)
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("Image must be under 20MB");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Create preview URL
-      setImagePreview(result);
-      // Extract base64 data (remove data:image/...;base64, prefix)
-      const base64 = result.split(",")[1];
-      setImageData({ base64, mediaType: file.type });
+    // Resize image to max 2000px wide (keeps long screenshots readable, reduces payload)
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const MAX_WIDTH = 2000;
+      const MAX_HEIGHT = 8000;
+      let { width, height } = img;
+
+      // Scale down if needed
+      if (width > MAX_WIDTH) {
+        height = Math.round(height * (MAX_WIDTH / width));
+        width = MAX_WIDTH;
+      }
+      if (height > MAX_HEIGHT) {
+        width = Math.round(width * (MAX_HEIGHT / height));
+        height = MAX_HEIGHT;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Convert to JPEG for smaller size
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      setImagePreview(dataUrl);
+      const base64 = dataUrl.split(",")[1];
+      setImageData({ base64, mediaType: "image/jpeg" });
     };
-    reader.readAsDataURL(file);
+    img.src = objectUrl;
 
     // Reset file input so same file can be re-selected
     e.target.value = "";
@@ -129,7 +153,7 @@ export function AILogInput({ month: selectedMonth, week: selectedWeek }: AILogIn
     const existingExercises = getAllExercises();
 
     // Build all entries and new exercises upfront
-    const newExercises: { id: string; name: string; usesBodyWeight: boolean; isOptional: boolean; isCustom: boolean }[] = [];
+    const newExercises: { id: string; name: string; usesBodyWeight: boolean; isOptional: boolean; isCustom: boolean; category?: string }[] = [];
     const entries: { id: string; userId: string; exercise: string; month: string; week: number; date: string; reps: number; sets: number; weight: number; maxReps: number; notes: string; createdAt: string }[] = [];
 
     for (const ex of preview) {
@@ -142,6 +166,7 @@ export function AILogInput({ month: selectedMonth, week: selectedWeek }: AILogIn
           usesBodyWeight: false,
           isOptional: true,
           isCustom: true,
+          category: ex.category,
         });
       }
 
