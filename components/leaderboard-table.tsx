@@ -296,7 +296,14 @@ export function Leaderboard({ month }: LeaderboardProps) {
     categoryGroups.get(cat)!.push(ex);
   }
 
-  const categoryOrder = ["Squat", "Deadlift", "Bench", "Shoulder Press", "Pull", "Push", "Legs", "Arms"];
+  const categoryOrder = [
+    "Squat", "Deadlift", "Bench", "Shoulder Press",
+    "Pull-ups", "Rows", "Lat Pulldown",
+    "Dips", "Push-ups", "Triceps",
+    "Curls", "Raises",
+    "Leg Press", "Leg Curl", "Lunges", "Calves",
+    "Core",
+  ];
   const sortedCategories = [...categoryGroups.entries()].sort((a, b) => {
     const ai = categoryOrder.indexOf(a[0]);
     const bi = categoryOrder.indexOf(b[0]);

@@ -54,7 +54,22 @@ Return ONLY valid JSON in this exact format, no other text:
   ]
 }
 
-Category must be one of: "Squat", "Deadlift", "Bench", "Shoulder Press", "Pull", "Push", "Legs", "Arms", or "Other".
+Category groups exercises that are the SAME movement (just barbell vs dumbbell variant). Different movements get different categories. Use one of:
+- "Squat" (back squat, goblet squat, dumbbell squat)
+- "Deadlift" (conventional, sumo, Romanian)
+- "Bench" (barbell bench, dumbbell bench, incline bench)
+- "Shoulder Press" (OHP, dumbbell shoulder press, military press)
+- "Pull-ups" (pull-ups, chin-ups)
+- "Rows" (barbell row, dumbbell row, cable row, seated row)
+- "Lat Pulldown" (lat pulldown, cable pulldown)
+- "Dips" (dips, bench dips)
+- "Triceps" (kickbacks, skull crushers, tricep extensions)
+- "Push-ups" (push-ups, diamond push-ups)
+- "Curls" (hammer curls, bicep curls, preacher curls)
+- "Raises" (lateral raise, front raise)
+- "Leg Press", "Leg Curl", "Lunges", "Calves"
+- "Core" (crunches, planks, sit-ups)
+- "Other" (anything else)
 Pick an emoji that matches the exercise. Use these guidelines:
 - Chest/bench/push-ups: 💪
 - Shoulders/OHP: 🙌
