@@ -143,24 +143,26 @@ function ExerciseBreakdown({ exercises: sorted, userStats }: {
               {ranked.map((u, i) => {
                 const stats = u.perExercise[exercise.id];
                 const style = RANK_STYLES[i] ?? { color: "text-white/30", bg: "bg-white/[0.02]", border: "border-transparent" };
+                const be = stats.bestEntry;
                 return (
                   <div key={u.userId} className={`rounded-xl border px-4 py-2.5 ${style.border} ${style.bg}`}>
-                    <div className="flex items-center gap-3 mb-1.5">
-                      <span className={`text-base font-black ${style.color}`}>{i + 1}</span>
-                      <span className="text-sm font-medium text-white">{u.name}</span>
-                      <span className="text-[10px] text-white/20">best of {stats.entries.length}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className={`text-base font-black ${style.color}`}>{i + 1}</span>
+                        <span className="text-sm font-medium text-white">{u.name}</span>
+                      </div>
+                      <span className="text-[10px] text-white/15">best of {stats.entries.length}</span>
                     </div>
                     {isBodyweightOnly ? (
-                      <div className="flex gap-4 text-xs pl-7">
-                        <span><span className="font-bold text-primary">{Math.max(...stats.entries.map((e) => e.reps))}</span><span className="text-white/25 ml-1">best reps</span></span>
-                        <span><span className="font-bold text-white">{stats.totalReps.toLocaleString()}</span><span className="text-white/25 ml-1">total</span></span>
+                      <div className="text-[11px] text-white/50 pl-7 mt-1">
+                        {Math.max(...stats.entries.map((e) => e.reps))} reps best · {stats.totalReps} total
                       </div>
                     ) : (
-                      <div className="flex gap-3 text-[11px] pl-7">
-                        <span><span className="font-bold text-primary">{stats.best}</span><span className="text-white/25">lb×{stats.bestReps}r</span></span>
-                        <span><span className="font-bold text-white">{stats.bestEntry.reps}r×{stats.bestEntry.sets}s</span></span>
-                        <span><span className="font-bold text-white">{stats.bestVolume.toLocaleString()}</span><span className="text-white/25">v</span></span>
-                        {db && <span><span className="font-bold text-blue-400">{getAdjustedWeight(stats.best, exercise)}</span><span className="text-white/25">adj</span></span>}
+                      <div className="text-[11px] pl-7 mt-1">
+                        <span className="text-white/60">{be.reps}r × {be.sets}s @ </span>
+                        <span className="font-bold text-primary">{stats.best} lbs</span>
+                        <span className="text-white/25"> = {stats.bestVolume.toLocaleString()} vol</span>
+                        {db && <span className="text-blue-400 ml-1">({getAdjustedWeight(stats.best, exercise)} adj)</span>}
                       </div>
                     )}
                   </div>
