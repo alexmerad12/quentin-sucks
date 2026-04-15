@@ -394,25 +394,11 @@ export function Leaderboard({ month }: LeaderboardProps) {
                                     </div>
                                   </div>
                                 ) : (
-                                  <div className="flex gap-4 text-xs pl-7 flex-wrap">
-                                    <div>
-                                      <span className="font-bold text-primary">{stats.best} lbs</span>
-                                      <span className="text-white/25 ml-1">× {stats.bestReps}r</span>
-                                    </div>
-                                    <div>
-                                      <span className="font-bold text-white">{stats.totalReps}</span>
-                                      <span className="text-white/25 ml-1">reps</span>
-                                    </div>
-                                    <div>
-                                      <span className="font-bold text-white">{stats.volume.toLocaleString()}</span>
-                                      <span className="text-white/25 ml-1">vol</span>
-                                    </div>
-                                    {db && (
-                                      <div>
-                                        <span className="font-bold text-blue-400">{getAdjustedWeight(stats.best, exercise)}</span>
-                                        <span className="text-white/25 ml-1">adj</span>
-                                      </div>
-                                    )}
+                                  <div className="flex gap-3 text-[11px] pl-7">
+                                    <span><span className="font-bold text-primary">{stats.best}</span><span className="text-white/25">lb×{stats.bestReps}r</span></span>
+                                    <span><span className="font-bold text-white">{stats.totalReps}</span><span className="text-white/25">r</span></span>
+                                    <span><span className="font-bold text-white">{stats.volume.toLocaleString()}</span><span className="text-white/25">v</span></span>
+                                    {db && <span><span className="font-bold text-blue-400">{getAdjustedWeight(stats.best, exercise)}</span><span className="text-white/25">adj</span></span>}
                                   </div>
                                 )}
                               </div>
