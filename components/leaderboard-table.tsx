@@ -376,48 +376,44 @@ export function Leaderboard({ month }: LeaderboardProps) {
                             const stats = u.perExercise[exercise.id];
                             const style = RANK_STYLES[i] ?? { color: "text-white/30", bg: "bg-white/[0.02]", border: "border-transparent" };
                             return (
-                              <div key={u.userId} className={`flex items-center justify-between rounded-xl border px-4 py-2.5 ${style.border} ${style.bg}`}>
-                                <div className="flex items-center gap-3">
+                              <div key={u.userId} className={`rounded-xl border px-4 py-2.5 ${style.border} ${style.bg}`}>
+                                <div className="flex items-center gap-3 mb-1.5">
                                   <span className={`text-base font-black ${style.color}`}>{i + 1}</span>
-                                  <div>
-                                    <div className="text-sm font-medium text-white">{u.name}</div>
-                                    <div className="text-[10px] text-white/25">{stats.entries.length} entries</div>
-                                  </div>
+                                  <span className="text-sm font-medium text-white">{u.name}</span>
+                                  <span className="text-[10px] text-white/20">{stats.entries.length} entries</span>
                                 </div>
                                 {isBodyweightOnly ? (
-                                  <div className="flex items-center gap-3 text-xs">
-                                    <div className="text-right">
-                                      <div className="font-bold text-white">{stats.totalReps.toLocaleString()}</div>
-                                      <div className="text-white/25">total reps</div>
+                                  <div className="flex gap-4 text-xs pl-7">
+                                    <div>
+                                      <span className="font-bold text-white">{stats.totalReps.toLocaleString()}</span>
+                                      <span className="text-white/25 ml-1">reps</span>
                                     </div>
-                                    <div className="text-right">
-                                      <div className="font-bold text-primary">
-                                        {Math.max(...stats.entries.map((e) => e.reps))}
-                                      </div>
-                                      <div className="text-white/25">best set</div>
+                                    <div>
+                                      <span className="font-bold text-primary">{Math.max(...stats.entries.map((e) => e.reps))}</span>
+                                      <span className="text-white/25 ml-1">best set</span>
                                     </div>
                                   </div>
                                 ) : (
-                                <div className="flex items-center gap-3 text-xs">
-                                  <div className="text-right">
-                                    <div className="font-bold text-white">{stats.totalReps}</div>
-                                    <div className="text-white/25">reps</div>
-                                  </div>
-                                  <div className="text-right">
-                                    <div className="font-bold text-white">{stats.volume.toLocaleString()}</div>
-                                    <div className="text-white/25">volume</div>
-                                  </div>
-                                  <div className="text-right">
-                                    <div className="font-bold text-primary">{stats.best} lbs</div>
-                                    <div className="text-white/25">{db ? "per arm" : "best"} × {stats.bestReps}r</div>
-                                  </div>
-                                  {db && (
-                                    <div className="text-right">
-                                      <div className="font-bold text-blue-400">{getAdjustedWeight(stats.best, exercise)}</div>
-                                      <div className="text-white/25">adjusted</div>
+                                  <div className="flex gap-4 text-xs pl-7 flex-wrap">
+                                    <div>
+                                      <span className="font-bold text-primary">{stats.best} lbs</span>
+                                      <span className="text-white/25 ml-1">× {stats.bestReps}r</span>
                                     </div>
-                                  )}
-                                </div>
+                                    <div>
+                                      <span className="font-bold text-white">{stats.totalReps}</span>
+                                      <span className="text-white/25 ml-1">reps</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-bold text-white">{stats.volume.toLocaleString()}</span>
+                                      <span className="text-white/25 ml-1">vol</span>
+                                    </div>
+                                    {db && (
+                                      <div>
+                                        <span className="font-bold text-blue-400">{getAdjustedWeight(stats.best, exercise)}</span>
+                                        <span className="text-white/25 ml-1">adj</span>
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             );
