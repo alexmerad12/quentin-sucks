@@ -6,6 +6,20 @@ export interface AppData {
   users: Record<UserId, User>;
   entries: WorkoutEntry[];
   customExercises: ExerciseConfig[];
+  cardioEntries: CardioEntry[];
+}
+
+export interface CardioEntry {
+  id: string;
+  userId: UserId;
+  exercise: string;
+  date: string;
+  month: string;
+  week: number;
+  distance: number;
+  duration: number;
+  notes: string;
+  createdAt: string;
 }
 
 export interface User {

@@ -11,6 +11,7 @@ function getDefaultData(): AppData {
     users: getDefaultUsers(),
     entries: [],
     customExercises: [],
+    cardioEntries: [],
   };
 }
 
@@ -22,6 +23,8 @@ export async function readServerData(): Promise<AppData> {
       await kv.set(KV_KEY, defaultData);
       return defaultData;
     }
+    // Backward compat: old KV data may not have cardioEntries
+    if (!data.cardioEntries) data.cardioEntries = [];
     return data;
   } catch {
     return getDefaultData();

@@ -112,5 +112,6 @@ export function getSeedData(): AppData {
     users,
     entries,
     customExercises: [],
+    cardioEntries: [],
   };
 }

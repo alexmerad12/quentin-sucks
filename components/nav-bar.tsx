@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Dumbbell, CalendarDays, Trophy } from "lucide-react";
+import { Home, Dumbbell, CalendarDays, Trophy, Footprints } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/lib/storage";
 
 const tabs = [
   { href: "/", label: "Home", icon: Home },
   { href: "/log", label: "Log", icon: Dumbbell },
+  { href: "/cardio", label: "Cardio", icon: Footprints },
   { href: "/history", label: "History", icon: CalendarDays },
   { href: "/leaderboard", label: "Board", icon: Trophy },
 ];

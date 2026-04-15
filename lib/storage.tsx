@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { nanoid } from "nanoid";
-import type { AppData, UserId, WorkoutEntry, User, ExerciseConfig } from "@/types";
+import type { AppData, UserId, WorkoutEntry, CardioEntry, User, ExerciseConfig } from "@/types";
 import { getDefaultUsers } from "./constants";
 import { getSeedData } from "./seed-data";
 import { EXERCISES } from "./exercises";
@@ -17,6 +17,7 @@ function getDefaultData(): AppData {
     users: getDefaultUsers(),
     entries: [],
     customExercises: [],
+    cardioEntries: [],
   };
 }
 
@@ -84,6 +85,10 @@ interface AppContextValue {
   getAllExercises: () => ExerciseConfig[];
   exportData: () => string;
   importData: (json: string) => boolean;
+  addCardioEntry: (entry: Omit<CardioEntry, "id" | "createdAt">) => void;
+  updateCardioEntry: (id: string, updates: Partial<CardioEntry>) => void;
+  deleteCardioEntry: (id: string) => void;
+  getCardioEntries: (filters: { userId?: UserId; exercise?: string; month?: string; week?: number }) => CardioEntry[];
   loadSeedData: () => void;
   clearAllData: () => void;
   refreshFromServer: () => Promise<void>;
@@ -109,6 +114,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const merged = {
           ...serverData,
           activeUser: localData.activeUser ?? serverData.activeUser,
+          cardioEntries: serverData.cardioEntries ?? [],
         };
         setData(merged);
         saveLocalData(merged);
@@ -131,6 +137,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const merged = {
           ...serverData,
           activeUser: prev.activeUser,
+          cardioEntries: serverData.cardioEntries ?? [],
         };
         saveLocalData(merged);
         return merged;
@@ -321,6 +328,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return [...EXERCISES, ...(data.customExercises || [])];
   }, [data.customExercises]);
 
+  // Cardio methods
+  const addCardioEntry = useCallback(
+    (entry: Omit<CardioEntry, "id" | "createdAt">) => {
+      const full: CardioEntry = { ...entry, id: nanoid(), createdAt: new Date().toISOString() };
+      persist((d) => ({ ...d, cardioEntries: [...(d.cardioEntries || []), full] }));
+      trackedSync("/api/cardio-entries", "POST", full);
+    },
+    [persist, trackedSync]
+  );
+
+  const updateCardioEntry = useCallback(
+    (id: string, updates: Partial<CardioEntry>) => {
+      persist((d) => ({
+        ...d,
+        cardioEntries: (d.cardioEntries || []).map((e) => (e.id === id ? { ...e, ...updates } : e)),
+      }));
+      trackedSync("/api/cardio-entries", "PATCH", { id, updates });
+    },
+    [persist, trackedSync]
+  );
+
+  const deleteCardioEntry = useCallback(
+    (id: string) => {
+      persist((d) => ({
+        ...d,
+        cardioEntries: (d.cardioEntries || []).filter((e) => e.id !== id),
+      }));
+      trackedSync("/api/cardio-entries", "DELETE", { id });
+    },
+    [persist, trackedSync]
+  );
+
+  const getCardioEntries = useCallback(
+    (filters: { userId?: UserId; exercise?: string; month?: string; week?: number }): CardioEntry[] => {
+      return (data.cardioEntries || []).filter((e) => {
+        if (filters.userId && e.userId !== filters.userId) return false;
+        if (filters.exercise && e.exercise !== filters.exercise) return false;
+        if (filters.month && e.month !== filters.month) return false;
+        if (filters.week && e.week !== filters.week) return false;
+        return true;
+      });
+    },
+    [data]
+  );
+
   const loadSeedData = useCallback(() => {
     const seed = getSeedData();
     saveLocalData(seed);
@@ -358,6 +410,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addCustomExercise,
         removeCustomExercise,
         getAllExercises,
+        addCardioEntry,
+        updateCardioEntry,
+        deleteCardioEntry,
+        getCardioEntries,
         importData,
         loadSeedData,
         clearAllData,
