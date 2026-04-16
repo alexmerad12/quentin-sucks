@@ -177,30 +177,53 @@ export async function POST(req: NextRequest) {
       contentParts.push({ type: "text", text: text! });
     }
 
-    const message = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
-      system: buildSystemPrompt(customExerciseList),
-      messages: [
-        {
-          role: "user",
-          content: contentParts,
-        },
-      ],
-    });
+    // Use Sonnet for images (better vision), Haiku for text (faster)
+    const model = image ? "claude-sonnet-4-5" : "claude-haiku-4-5-20251001";
 
-    const content = message.content[0];
-    if (content.type !== "text") {
-      return NextResponse.json({ error: "Unexpected response" }, { status: 500 });
+    async function callClaude() {
+      return client.messages.create({
+        model,
+        max_tokens: 2048,
+        system: buildSystemPrompt(customExerciseList),
+        messages: [{ role: "user", content: contentParts }],
+      });
     }
 
-    // Parse the JSON response
-    const jsonMatch = content.text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return NextResponse.json({ error: "Could not parse response" }, { status: 500 });
+    function extractJson(text: string): any {
+      // Try to extract JSON — handle markdown code blocks and loose text
+      let cleaned = text.trim();
+      // Strip markdown fences
+      cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+      // Try direct parse first
+      try { return JSON.parse(cleaned); } catch {}
+      // Fall back to greedy brace match
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      if (!match) return null;
+      try { return JSON.parse(match[0]); } catch { return null; }
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    // Try up to 2 times (sometimes model returns malformed JSON)
+    let parsed: any = null;
+    let lastError = "";
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const message = await callClaude();
+        const content = message.content[0];
+        if (content.type !== "text") {
+          lastError = "Unexpected response type";
+          continue;
+        }
+        parsed = extractJson(content.text);
+        if (parsed && parsed.exercises) break;
+        lastError = "Could not parse response";
+      } catch (err: any) {
+        lastError = err.message || "API error";
+      }
+    }
+
+    if (!parsed) {
+      return NextResponse.json({ error: lastError || "Failed to parse" }, { status: 500 });
+    }
     return NextResponse.json(parsed);
   } catch (error: any) {
     console.error("Parse workout error:", error);
