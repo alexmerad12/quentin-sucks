@@ -186,11 +186,17 @@ export function Leaderboard({ month }: LeaderboardProps) {
   const { getEntries, getBodyWeight, getAllExercises } = useApp();
   const exercises = getAllExercises();
 
-  // Gather all stats per user
+  // Gather all stats per user. Empty month = all time.
+  const isAllTime = !month;
   const userStats = USER_LIST.map((u) => {
     const userId = u.id as UserId;
-    const allEntries = getEntries({ userId, month });
-    const bodyWeight = getBodyWeight(userId, month);
+    const allEntries = isAllTime
+      ? getEntries({ userId })
+      : getEntries({ userId, month });
+    // For all-time, use most recent body weight
+    const bodyWeight = isAllTime
+      ? getBodyWeight(userId, "9999-12")
+      : getBodyWeight(userId, month);
 
     const totalVolume = allEntries.reduce((sum, e) => sum + calcVolume(e, bodyWeight), 0);
 
@@ -264,7 +270,7 @@ export function Leaderboard({ month }: LeaderboardProps) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center">
         <Trophy className="mx-auto mb-3 h-6 w-6 text-white/20" />
-        <p className="text-sm text-white/30">No data this month</p>
+        <p className="text-sm text-white/30">No data yet</p>
       </div>
     );
   }

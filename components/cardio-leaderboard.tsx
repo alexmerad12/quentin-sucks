@@ -40,9 +40,12 @@ export function CardioLeaderboard({ month }: { month: string }) {
     });
   };
 
+  const isAllTime = !month;
   const userStats = USER_LIST.map((u) => {
     const userId = u.id as UserId;
-    const allEntries = getCardioEntries({ userId, month });
+    const allEntries = isAllTime
+      ? getCardioEntries({ userId })
+      : getCardioEntries({ userId, month });
     const totalDistance = allEntries.reduce((s, e) => s + e.distance, 0);
     const totalDuration = allEntries.reduce((s, e) => s + e.duration, 0);
 
@@ -96,7 +99,7 @@ export function CardioLeaderboard({ month }: { month: string }) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center">
         <Trophy className="mx-auto mb-3 h-6 w-6 text-white/20" />
-        <p className="text-sm text-white/30">No cardio data this month</p>
+        <p className="text-sm text-white/30">No cardio data yet</p>
       </div>
     );
   }

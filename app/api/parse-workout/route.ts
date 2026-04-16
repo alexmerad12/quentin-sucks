@@ -99,13 +99,33 @@ Rules:
 - Set "isNew": true ONLY for exercises that don't match ANY known or custom exercise
 
 IMAGE PARSING RULES (when reading a photo of a workout log):
-- Workout apps typically show each set as "REPS x WEIGHT unit" (e.g., "12 x 25 lb" = 12 reps at 25 lbs)
-- The number BEFORE the "x" is REPS, the number AFTER is WEIGHT
-- Count the number of lines/rows per exercise to determine SETS (e.g., 3 lines of "12 x 25 lb" = 3 sets of 12 reps at 25 lbs)
-- If sets have different reps or weights, use the most common values and set maxReps to the highest rep count
-- If sets have different weights (e.g., "10 x 15 lb" then "10 x 20 lb"), use the heaviest weight and note the variation
-- Look for exercise names as headers/titles above the set details
-- Ignore UI elements like checkmarks, icons, timers, calories, etc.`;
+
+Workout logs come in DIFFERENT FORMATS. Identify which format first, then parse accordingly:
+
+FORMAT A — List of sets (each line = 1 set):
+- Shows each set as a separate line: "5 x 255 lb", "5 x 255 lb", "5 x 255 lb"
+- Number BEFORE "x" is REPS, number AFTER is WEIGHT
+- COUNT THE LINES to get SETS (e.g., 5 identical lines = 5 sets)
+- Example: 5 lines of "5 x 255 lb" → reps: 5, sets: 5, weight: 255
+
+FORMAT B — Red/colored circles indicating sets (Strong app, Hevy, etc.):
+- Shows a HEADER like "Deadlift 5×250lb" which is the TARGET (prescribed weight × reps) — DO NOT use this as actual reps/sets
+- Below the header are COLORED CIRCLES (red, green, blue) — each circle represents ONE COMPLETED SET
+- The number INSIDE the circle is the REPS done in that set
+- The small number BELOW the circle is the WEIGHT used for that set
+- COUNT THE CIRCLES to get SETS (e.g., 2 circles = 2 sets)
+- Example: Header "5×250lb", 2 circles showing "5" with "250" below and "5" with "235" below → reps: 5, sets: 2, weight: 250 (use heaviest)
+
+HOW TO DETECT THE FORMAT:
+- If you see COLORED CIRCLES with numbers inside them → Format B (count circles for sets)
+- If you see REPEATED TEXT LINES like "5 x 255 lb" → Format A (count lines for sets)
+- NEVER use the header "5×250lb" as both reps AND sets — that's only in Format A when listed multiple times
+
+General rules for both formats:
+- If sets have different weights, use the HEAVIEST weight
+- Set maxReps to the highest rep count seen in any set
+- Look for the exercise name as a title/header above the sets
+- Ignore UI elements like checkmarks, exercise images, timers, calories, share/close buttons, body weight, date headers`;
 }
 
 type ImageMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
