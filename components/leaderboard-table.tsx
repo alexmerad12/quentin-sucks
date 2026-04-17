@@ -73,7 +73,7 @@ function CategorySection({ icon, title, children, accent }: {
 
 function ExerciseBreakdown({ exercises: sorted, userStats }: {
   exercises: ExerciseConfig[];
-  userStats: { userId: string; name: string; perExercise: Record<string, { bestVolume: number; best: number; bestReps: number; bestSets: number; bestEntry: WorkoutEntry; totalReps: number; entries: WorkoutEntry[] }> }[];
+  userStats: { userId: string; name: string; perExercise: Record<string, { bestVolume: number; best: number; bestReps: number; bestSets: number; bestEntry: WorkoutEntry; bestEntryWeight: number; totalReps: number; entries: WorkoutEntry[] }> }[];
 }) {
   const [expandedSolo, setExpandedSolo] = useState<Set<string>>(new Set());
 
@@ -160,7 +160,7 @@ function ExerciseBreakdown({ exercises: sorted, userStats }: {
                     ) : (
                       <div className="text-[11px] pl-7 mt-1">
                         <span className="text-white/60">{be.reps}r × {be.sets}s @ </span>
-                        <span className="font-bold text-primary">{stats.best} lbs</span>
+                        <span className="font-bold text-primary">{stats.bestEntryWeight} lbs</span>
                         {exercise.usesBodyWeight && be.weight > 0 && (
                           <span className="text-white/25"> (BW+{be.weight})</span>
                         )}
@@ -168,7 +168,7 @@ function ExerciseBreakdown({ exercises: sorted, userStats }: {
                           <span className="text-white/25"> (BW)</span>
                         )}
                         <span className="text-white/25"> = {stats.bestVolume.toLocaleString()} vol</span>
-                        {db && <span className="text-blue-400 ml-1">({getAdjustedWeight(stats.best, exercise)} adj)</span>}
+                        {db && <span className="text-blue-400 ml-1">({getAdjustedWeight(stats.bestEntryWeight, exercise)} adj)</span>}
                       </div>
                     )}
                   </div>
@@ -215,7 +215,7 @@ export function Leaderboard({ month }: LeaderboardProps) {
     const exerciseCount = new Set(allEntries.map((e) => e.exercise)).size;
 
     // Per-exercise stats — use BEST single entry, not sum of all weeks
-    const perExercise: Record<string, { bestVolume: number; best: number; bestReps: number; bestSets: number; bestEntry: WorkoutEntry; totalReps: number; entries: WorkoutEntry[] }> = {};
+    const perExercise: Record<string, { bestVolume: number; best: number; bestReps: number; bestSets: number; bestEntry: WorkoutEntry; bestEntryWeight: number; totalReps: number; entries: WorkoutEntry[] }> = {};
     const knownIds = new Set(exercises.map((e) => e.id));
 
     function buildExStats(exEntries: WorkoutEntry[]) {
@@ -224,6 +224,7 @@ export function Leaderboard({ month }: LeaderboardProps) {
       let bestVolume = 0;
       let bestSets = 0;
       let bestEntry = exEntries[0];
+      let bestEntryWeight = getEffectiveWeight(exEntries[0], bodyWeight);
       for (const e of exEntries) {
         const w = getEffectiveWeight(e, bodyWeight);
         const v = calcVolume(e, bodyWeight);
@@ -235,6 +236,7 @@ export function Leaderboard({ month }: LeaderboardProps) {
           bestVolume = v;
           bestSets = e.sets;
           bestEntry = e;
+          bestEntryWeight = w;
         }
       }
       return {
@@ -243,6 +245,7 @@ export function Leaderboard({ month }: LeaderboardProps) {
         bestReps,
         bestSets,
         bestEntry,
+        bestEntryWeight,
         totalReps: exEntries.reduce((s, e) => s + e.reps * e.sets, 0),
         entries: exEntries,
       };
